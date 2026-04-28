@@ -138,6 +138,14 @@ export default function DetailModal() {
   const appliedBackground = resolveTaskAppliedImageParam(task, 'background')
   const appliedAction = resolveTaskAppliedImageParam(task, 'action')
   const revisedPrompt = task.responseMeta?.revisedPrompt?.trim() || ''
+  const taskApiProtocol =
+    task.requestSettingsSnapshot?.apiProtocol ?? task.errorDebug?.apiProtocol ?? null
+  const taskModel =
+    task.requestSettingsSnapshot?.model?.trim() || task.errorDebug?.model?.trim() || ''
+  const taskResponsesImageModel =
+    task.requestSettingsSnapshot?.responsesImageModel?.trim() ||
+    task.errorDebug?.responsesImageModel?.trim() ||
+    ''
 
   const formatTime = (ts: number | null) => {
     if (!ts) return ''
@@ -240,6 +248,7 @@ export default function DetailModal() {
         editMaskImageId: task.editMaskImageId ?? null,
         editSourceImageId: task.editSourceImageId ?? null,
         editSelection: task.editSelection ?? null,
+        requestSettingsSnapshot: task.requestSettingsSnapshot ?? null,
         responseMeta: task.responseMeta ?? null,
       },
       localErrorLog: task.errorDebug ?? null,
@@ -539,6 +548,11 @@ export default function DetailModal() {
                 <br />
                 <span className="text-gray-700 dark:text-gray-300 font-medium break-all">{providerName}</span>
               </div>
+              {taskApiProtocol ? renderValueCard('协议', taskApiProtocol) : null}
+              {taskModel ? renderValueCard('主模型', taskModel) : null}
+              {taskApiProtocol === 'responses' && taskResponsesImageModel
+                ? renderValueCard('图像模型', taskResponsesImageModel)
+                : null}
               {task.status === 'done' && currentImageSize
                 ? renderValueCard('输出像素', currentImageSize)
                 : renderValueCard('请求尺寸', task.params.size)}

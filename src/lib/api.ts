@@ -953,19 +953,6 @@ async function parseImagesFromPayload(
   return images
 }
 
-function shouldFallbackToResponses(error: unknown): boolean {
-  if (!(error instanceof Error)) return false
-
-  const status = (error as ApiError).status
-  if (status != null && [404, 405, 501].includes(status)) {
-    return true
-  }
-
-  return /(?:not found|no route|unknown endpoint|unsupported|not implemented|only .*responses|use .*responses|images\/(?:generations|edits))/i.test(
-    error.message,
-  )
-}
-
 interface SharedRequestContext {
   controller: AbortController
   requestHeaders: Record<string, string>
@@ -1007,7 +994,7 @@ interface ResponsesRequestPlan {
 }
 
 function getApiProtocol(settings: AppSettings): ApiProtocol {
-  return settings.apiProtocol || 'auto'
+  return settings.apiProtocol === 'responses' ? 'responses' : 'images'
 }
 
 function getResponsesImageModel(settings: AppSettings): string {
@@ -1899,16 +1886,7 @@ export async function callImageApi(opts: CallApiOptions): Promise<CallApiResult>
     if (apiProtocol === 'images') {
       return await callImagesApi(normalizedOpts, ctx)
     }
-
-    try {
-      return await callImagesApi(normalizedOpts, ctx)
-    } catch (error) {
-      if (!shouldFallbackToResponses(error)) {
-        throw error
-      }
-    }
-
-    return await callResponsesApi(normalizedOpts, ctx)
+    return await callImagesApi(normalizedOpts, ctx)
   } catch (error) {
     throw attachLocalDebugToError(error, normalizedOpts, debugLog)
   } finally {

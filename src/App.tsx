@@ -26,7 +26,12 @@ export default function App() {
 
   useEffect(() => {
     const isApiProtocol = (value: string): value is ApiProtocol =>
-      value === 'auto' || value === 'images' || value === 'responses'
+      value === 'images' || value === 'responses'
+    const normalizeApiProtocolQueryValue = (value: string): ApiProtocol | null => {
+      const normalized = value.trim()
+      if (normalized === 'auto') return 'images'
+      return isApiProtocol(normalized) ? normalized : null
+    }
     const isRequestMode = (value: string): value is RequestMode =>
       value === 'direct' || value === 'local_proxy'
     const isResponsesTransportMode = (value: string): value is ResponsesTransportMode =>
@@ -64,8 +69,11 @@ export default function App() {
     }
 
     const apiProtocolParam = searchParams.get('apiProtocol')
-    if (apiProtocolParam !== null && isApiProtocol(apiProtocolParam.trim())) {
-      nextSettings.apiProtocol = apiProtocolParam.trim()
+    if (apiProtocolParam !== null) {
+      const normalizedApiProtocol = normalizeApiProtocolQueryValue(apiProtocolParam)
+      if (normalizedApiProtocol) {
+        nextSettings.apiProtocol = normalizedApiProtocol
+      }
     }
 
     const requestModeParam = searchParams.get('requestMode')

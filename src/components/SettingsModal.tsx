@@ -15,7 +15,6 @@ import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
 import Select from './Select'
 
 const API_PROTOCOL_OPTIONS: Array<{ label: string; value: ApiProtocol }> = [
-  { label: '自动', value: 'auto' },
   { label: 'Images API', value: 'images' },
   { label: 'Responses API', value: 'responses' },
 ]
@@ -301,10 +300,11 @@ export default function SettingsModal() {
                   className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
                 />
                 <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-                  <div>自动：优先走 Images API，接口不支持时再回退到 Responses API。</div>
+                  <div>Images API：直接请求 `/v1/images/generations` 或 `/v1/images/edits`。</div>
+                  <div>Responses API：直接请求 `/v1/responses`，不再自动回退或切换。</div>
                   <div>
                     支持通过查询参数覆盖：
-                    <code className="bg-gray-100 dark:bg-white/[0.06] px-1 py-0.5 rounded ml-1">?apiProtocol=auto|images|responses</code>
+                    <code className="bg-gray-100 dark:bg-white/[0.06] px-1 py-0.5 rounded ml-1">?apiProtocol=images|responses</code>
                   </div>
                 </div>
               </label>

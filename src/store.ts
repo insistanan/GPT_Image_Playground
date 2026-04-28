@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
+  ApiProtocol,
   AppSettings,
   CategoryConfig,
   ImageEditSelection,
@@ -246,6 +247,10 @@ function ensureCategoryNameAvailable(
   return normalizedName
 }
 
+function normalizeApiProtocol(value: unknown): ApiProtocol {
+  return value === 'responses' ? 'responses' : 'images'
+}
+
 function createProviderConfig(
   settings: Partial<AppSettings>,
   name: string,
@@ -263,6 +268,7 @@ function createProviderConfig(
   return {
     ...DEFAULT_SETTINGS,
     ...settings,
+    apiProtocol: normalizeApiProtocol(settings.apiProtocol),
     responsesPromptRevisionMode,
     id,
     name: name.trim() || '未命名供应商',
@@ -1064,6 +1070,11 @@ export async function submitTask() {
     editSourceImageId: maskedInput?.sourceImageId ?? maskedInput?.id ?? null,
     editSelection: maskedInput?.editSelection ?? null,
     outputImages: [],
+    requestSettingsSnapshot: {
+      apiProtocol: requestSettings.apiProtocol || DEFAULT_SETTINGS.apiProtocol,
+      model: requestSettings.model,
+      responsesImageModel: requestSettings.responsesImageModel || null,
+    },
     responseMeta: null,
     errorDebug: null,
     status: 'running',

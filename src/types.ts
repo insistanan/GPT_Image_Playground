@@ -13,7 +13,7 @@ export interface AppSettings {
   requestMode: RequestMode
 }
 
-export type ApiProtocol = 'auto' | 'images' | 'responses'
+export type ApiProtocol = 'images' | 'responses'
 export type RequestMode = 'direct' | 'local_proxy'
 export type ResponsesTransportMode = 'auto' | 'stream' | 'json'
 export type ResponsesImageInputMode = 'auto' | 'file_id'
@@ -66,7 +66,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   responsesImageInputMode: 'auto',
   responsesPromptRevisionMode: 'allow',
   timeout: 300,
-  apiProtocol: 'auto',
+  apiProtocol: 'images',
   requestMode: DEFAULT_REQUEST_MODE,
 }
 
@@ -183,6 +183,12 @@ export interface InputImage {
 
 export type TaskStatus = 'running' | 'done' | 'error'
 
+export interface TaskRequestSettingsSnapshot {
+  apiProtocol: ApiProtocol
+  model: string
+  responsesImageModel?: string | null
+}
+
 export interface TaskRecord {
   id: string
   /** 任务提交时选中的供应商 ID */
@@ -209,6 +215,8 @@ export interface TaskRecord {
   editSelection?: ImageEditSelection | null
   /** 输出图片的 image store id 列表 */
   outputImages: string[]
+  /** 提交任务时记录的协议与模型快照，避免后续改供应商配置后丢失调试上下文 */
+  requestSettingsSnapshot?: TaskRequestSettingsSnapshot | null
   /** API 返回的实际生效图片参数与附加元信息 */
   responseMeta?: TaskResponseMeta | null
   /** 失败时记录的请求与响应调试上下文 */

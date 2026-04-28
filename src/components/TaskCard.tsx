@@ -132,6 +132,8 @@ function TaskCard({
   const appliedQuality = resolveTaskAppliedImageParam(task, 'quality')
   const appliedSize = resolveTaskAppliedImageParam(task, 'size')
   const appliedOutputFormat = resolveTaskAppliedImageParam(task, 'output_format')
+  const taskApiProtocol =
+    task.requestSettingsSnapshot?.apiProtocol ?? task.errorDebug?.apiProtocol ?? null
   const sizeChipValue = coverSize || task.params.size
   const sizeTitleParts: string[] = []
   if (coverSize) {
@@ -328,6 +330,14 @@ function TaskCard({
               >
                 {providerName}
               </span>
+              {taskApiProtocol && (
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300 flex-shrink-0 font-mono"
+                  title={`协议: ${taskApiProtocol}`}
+                >
+                  {taskApiProtocol}
+                </span>
+              )}
               <span
                 className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 flex-shrink-0"
                 title={appliedQuality && appliedQuality !== task.params.quality ? `请求: ${task.params.quality} / 实际: ${displayQuality}` : undefined}
