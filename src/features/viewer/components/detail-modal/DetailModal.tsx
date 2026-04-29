@@ -140,7 +140,9 @@ export default function DetailModal() {
       title: '彻底删除记录',
       message: '确定要彻底删除这条记录吗？删除后将无法恢复，并会清理未被其他任务引用的图片。',
       confirmText: '彻底删除',
-      action: () => purgeTask(task),
+      action: async () => {
+        await purgeTask(task)
+      },
     })
   }
 

@@ -73,7 +73,7 @@ export interface AppState {
     title: string
     message: string
     confirmText?: string
-    action: () => void
+    action: () => void | Promise<void>
   } | null
   setConfirmDialog: (dialog: AppState['confirmDialog']) => void
 }

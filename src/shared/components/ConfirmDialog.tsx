@@ -5,6 +5,12 @@ export default function ConfirmDialog() {
   const confirmDialog = useStore((s) => s.confirmDialog)
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
 
+  const handleConfirm = async () => {
+    if (!confirmDialog) return
+    await confirmDialog.action()
+    setConfirmDialog(null)
+  }
+
   useCloseOnEscape(Boolean(confirmDialog), () => setConfirmDialog(null))
 
   if (!confirmDialog) return null
@@ -32,8 +38,7 @@ export default function ConfirmDialog() {
           </button>
           <button
             onClick={() => {
-              confirmDialog.action()
-              setConfirmDialog(null)
+              void handleConfirm()
             }}
             className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition"
           >

@@ -83,7 +83,9 @@ export function useTaskGridActions(options: UseTaskGridActionsOptions) {
         title: '彻底删除记录',
         message: '确定要彻底删除这条记录吗？删除后将无法恢复，并会清理未被其他任务引用的图片。',
         confirmText: '彻底删除',
-        action: () => purgeTask(task),
+        action: async () => {
+          await purgeTask(task)
+        },
       })
     },
     [setConfirmDialog],
@@ -150,7 +152,9 @@ export function useTaskGridActions(options: UseTaskGridActionsOptions) {
       title: '批量彻底删除',
       message: `确定要彻底删除选中的 ${selectedTasks.length} 条记录吗？删除后将无法恢复，并会清理未被其他任务引用的图片。`,
       confirmText: '彻底删除',
-      action: () => purgeTasks(selectedTasks),
+      action: async () => {
+        await purgeTasks(selectedTasks)
+      },
     })
   }, [selectedTasks, setConfirmDialog])
 

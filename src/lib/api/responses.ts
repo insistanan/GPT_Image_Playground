@@ -485,7 +485,7 @@ async function callResponsesApiWithInputMode(
     preparedEditAssets.inputImageDataUrls,
     responsesImageInputMode,
     ctx,
-    preparedEditAssets.preserveOriginalIndices,
+    { preserveOriginalIndices: preparedEditAssets.preserveOriginalIndices },
   )
   const { editMask, uploadedFileIds: uploadedMaskFileIds } = await prepareResponsesEditMask(
     opts.settings.baseUrl,

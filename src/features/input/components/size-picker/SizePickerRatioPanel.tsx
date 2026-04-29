@@ -1,12 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { parseRatio, type SizeTier } from '../../../../lib/size'
-import { RATIOS, TIERS, getOptionButtonClass } from './shared'
+import { RATIOS, TIERS, getOptionButtonClass, type SizePickerRatioValue } from './shared'
 
 interface SizePickerRatioPanelProps {
   tier: SizeTier
   setTier: Dispatch<SetStateAction<SizeTier>>
-  ratio: string
-  setRatio: Dispatch<SetStateAction<string>>
+  ratio: SizePickerRatioValue
+  setRatio: Dispatch<SetStateAction<SizePickerRatioValue>>
   customRatio: string
   setCustomRatio: Dispatch<SetStateAction<string>>
 }

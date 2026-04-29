@@ -14,6 +14,8 @@ export const RATIOS = [
 ] as const
 
 export type SizePickerMode = 'auto' | 'ratio' | 'resolution'
+export type PresetRatioValue = (typeof RATIOS)[number]['value']
+export type SizePickerRatioValue = PresetRatioValue | 'custom'
 
 export function parseSize(size: string) {
   const match = size.match(/^\s*(\d+)\s*[xX×]\s*(\d+)\s*$/)

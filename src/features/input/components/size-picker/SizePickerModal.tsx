@@ -4,7 +4,12 @@ import SizePickerAutoPanel from './SizePickerAutoPanel'
 import SizePickerRatioPanel from './SizePickerRatioPanel'
 import SizePickerResolutionPanel from './SizePickerResolutionPanel'
 import SizePickerTabs from './SizePickerTabs'
-import { findPresetForSize, parseSize, type SizePickerMode } from './shared'
+import {
+  findPresetForSize,
+  parseSize,
+  type SizePickerMode,
+  type SizePickerRatioValue,
+} from './shared'
 
 interface SizePickerModalProps {
   currentSize: string
@@ -26,7 +31,7 @@ export default function SizePickerModal({
   })
 
   const [tier, setTier] = useState<SizeTier>(currentPreset?.tier ?? '1K')
-  const [ratio, setRatio] = useState(currentPreset?.ratio ?? '1:1')
+  const [ratio, setRatio] = useState<SizePickerRatioValue>(currentPreset?.ratio ?? '1:1')
   const [customRatio, setCustomRatio] = useState('16:9')
   const [customW, setCustomW] = useState(currentParsedSize?.width ?? '1024')
   const [customH, setCustomH] = useState(currentParsedSize?.height ?? '1024')

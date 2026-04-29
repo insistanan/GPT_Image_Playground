@@ -72,30 +72,37 @@ export default function App() {
     }
 
     const requestModeParam = searchParams.get('requestMode')
-    if (requestModeParam !== null && isRequestMode(requestModeParam.trim())) {
-      nextSettings.requestMode = requestModeParam.trim()
+    const normalizedRequestMode = requestModeParam?.trim()
+    if (normalizedRequestMode && isRequestMode(normalizedRequestMode)) {
+      nextSettings.requestMode = normalizedRequestMode
     }
 
     const responsesTransportParam = searchParams.get('responsesTransport')
-    if (responsesTransportParam !== null && isResponsesTransportMode(responsesTransportParam.trim())) {
-      nextSettings.responsesTransport = responsesTransportParam.trim()
+    const normalizedResponsesTransport = responsesTransportParam?.trim()
+    if (
+      normalizedResponsesTransport &&
+      isResponsesTransportMode(normalizedResponsesTransport)
+    ) {
+      nextSettings.responsesTransport = normalizedResponsesTransport
     }
 
     const responsesImageInputModeParam = searchParams.get('responsesImageInputMode')
+    const normalizedResponsesImageInputMode = responsesImageInputModeParam?.trim()
     if (
-      responsesImageInputModeParam !== null &&
-      isResponsesImageInputMode(responsesImageInputModeParam.trim())
+      normalizedResponsesImageInputMode &&
+      isResponsesImageInputMode(normalizedResponsesImageInputMode)
     ) {
-      nextSettings.responsesImageInputMode = responsesImageInputModeParam.trim()
+      nextSettings.responsesImageInputMode = normalizedResponsesImageInputMode
     }
 
     const responsesPromptRevisionModeParam = searchParams.get('responsesPromptRevisionMode')
+    const normalizedResponsesPromptRevisionMode = responsesPromptRevisionModeParam?.trim()
     if (
-      responsesPromptRevisionModeParam !== null &&
-      isResponsesPromptRevisionMode(responsesPromptRevisionModeParam.trim())
+      normalizedResponsesPromptRevisionMode &&
+      isResponsesPromptRevisionMode(normalizedResponsesPromptRevisionMode)
     ) {
-      nextSettings.responsesPromptRevisionMode = responsesPromptRevisionModeParam.trim()
-    } else if (responsesPromptRevisionModeParam?.trim() === 'forbid') {
+      nextSettings.responsesPromptRevisionMode = normalizedResponsesPromptRevisionMode
+    } else if (normalizedResponsesPromptRevisionMode === 'forbid') {
       nextSettings.responsesPromptRevisionMode = 'compat'
     }
 
