@@ -28,10 +28,6 @@ export default function ApiRequestSettings({
         <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
           <div>Images API：直接请求 `/v1/images/generations` 或 `/v1/images/edits`。</div>
           <div>Responses API：直接请求 `/v1/responses`，不再自动回退或切换。</div>
-          <div>
-            支持通过查询参数覆盖：
-            <code className="ml-1 rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">?apiProtocol=images|responses</code>
-          </div>
         </div>
       </label>
 
@@ -46,10 +42,6 @@ export default function ApiRequestSettings({
         <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
           <div>直连：浏览器直接请求 API URL。</div>
           <div>本地代理：先请求同源代理，再由本地 dev server 转发到 API URL，可绕过浏览器 CORS 预检。</div>
-          <div>
-            支持通过查询参数覆盖：
-            <code className="ml-1 rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">?requestMode=direct|local_proxy</code>
-          </div>
           {draft.requestMode === 'local_proxy' ? (
             proxyConfig?.enabled ? (
               <div>

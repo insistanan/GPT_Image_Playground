@@ -29,10 +29,6 @@ export default function ApiConnectionFields({
           placeholder="https://api.openai.com/v1"
           className={fieldClassName}
         />
-        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          支持通过查询参数覆盖：
-          <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">?apiUrl=</code>
-        </div>
       </label>
 
       <div className="block">
@@ -66,10 +62,6 @@ export default function ApiConnectionFields({
               </svg>
             )}
           </button>
-        </div>
-        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          支持通过查询参数覆盖：
-          <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">?apiKey=</code>
         </div>
       </div>
     </>

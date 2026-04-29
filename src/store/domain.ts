@@ -37,6 +37,10 @@ function normalizeApiProtocol(value: unknown): ApiProtocol {
   return value === 'responses' ? 'responses' : 'images'
 }
 
+function normalizeRequestMode(value: unknown): AppSettings['requestMode'] {
+  return value === 'direct' ? 'direct' : 'local_proxy'
+}
+
 export function getProviderSettings(provider: ProviderConfig): AppSettings {
   const { id, name, ...settings } = provider
   return settings
@@ -364,6 +368,7 @@ export function createProviderConfig(
     ...DEFAULT_SETTINGS,
     ...settings,
     apiProtocol: normalizeApiProtocol(settings.apiProtocol),
+    requestMode: normalizeRequestMode(settings.requestMode),
     responsesPromptRevisionMode,
     id,
     name: name.trim() || '未命名供应商',

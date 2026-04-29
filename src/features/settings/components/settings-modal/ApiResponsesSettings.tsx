@@ -81,10 +81,6 @@ export default function ApiResponsesSettings({
           <div>仅 Responses API 生效。</div>
           <div>允许：正常发送提示词，接受模型修订。</div>
           <div>禁止（软禁止）：自动在原提示词前加入“不要改写原提示词”的前置约束，再发送给 Responses。</div>
-          <div>
-            支持通过查询参数覆盖：
-            <code className="ml-1 rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">?responsesPromptRevisionMode=allow|compat</code>
-          </div>
         </div>
       </label>
     </>
