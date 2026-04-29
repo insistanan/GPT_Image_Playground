@@ -2208,19 +2208,20 @@ export async function readResponsesPayloadStream(
   )
 
   if (sawAnyEvents) {
-    if (failedPayload) {
-      const nestedResponse = isRecord(failedPayload.response) ? failedPayload.response : null
+    if (failedPayload !== null) {
+      const currentFailedPayload = failedPayload as Record<string, unknown>
+      const nestedResponse = isRecord(currentFailedPayload.response) ? currentFailedPayload.response : null
       const message =
-        extractErrorMessage(failedPayload) ||
+        extractErrorMessage(currentFailedPayload) ||
         (nestedResponse ? extractErrorMessage(nestedResponse) : null) ||
         'Responses API 处理失败'
       if (logEntry) {
-        logEntry.responseBody = sanitizeDebugValue(failedPayload)
+        logEntry.responseBody = sanitizeDebugValue(currentFailedPayload)
       }
       throw createApiError(message, response.status, {
         requestId,
         details: {
-          responseBody: failedPayload,
+          responseBody: currentFailedPayload,
         },
       })
     }
@@ -2228,10 +2229,13 @@ export async function readResponsesPayloadStream(
     let payload: unknown
     if (useSplitStreamPath) {
       payload = buildLargeResponsesCompletedPayload(completedResponse, outputItems, lastJsonPayload)
-    } else if (completedResponse) {
-      const existingOutput = Array.isArray(completedResponse.output) ? completedResponse.output : []
+    } else if (completedResponse !== null) {
+      const currentCompletedResponse = completedResponse as Record<string, unknown>
+      const existingOutput = Array.isArray(currentCompletedResponse.output)
+        ? currentCompletedResponse.output
+        : []
       payload = buildCompactResponsesPayload(
-        completedResponse,
+        currentCompletedResponse,
         outputItems.length > 0 ? outputItems : existingOutput,
       )
     } else if (outputItems.length > 0) {
