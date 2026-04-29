@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useStore, getCachedImage, ensureImageCached } from '../store'
-import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
+import { useStore, getCachedImage, ensureImageCached } from '../../../store'
+import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
 
 const MIN_SCALE = 1
 const MAX_SCALE = 10

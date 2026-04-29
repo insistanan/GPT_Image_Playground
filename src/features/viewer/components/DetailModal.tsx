@@ -10,9 +10,9 @@ import {
   removeTask,
   purgeTask,
   restoreTask,
-} from '../store'
-import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
-import { formatImageRatio } from '../lib/size'
+} from '../../../store'
+import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
+import { formatImageRatio } from '../../../lib/size'
 import {
   canEditTaskOutputs,
   isTaskInRecycleBin,
@@ -24,7 +24,7 @@ import {
   resolveTaskStatusLabel,
   resolveTaskTransportLabel,
   resolveTaskTransportMeta,
-} from '../types'
+} from '../../../types'
 
 const RECYCLE_BIN_RETENTION_MS = 15 * 24 * 60 * 60 * 1000
 

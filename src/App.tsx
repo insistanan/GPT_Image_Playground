@@ -9,17 +9,12 @@ import type {
   ResponsesPromptRevisionMode,
   ResponsesTransportMode,
 } from './types'
-import Header from './components/Header'
-import SearchBar from './components/SearchBar'
-import TaskGrid from './components/TaskGrid'
-import InputBar from './components/InputBar'
-import DetailModal from './components/DetailModal'
-import ImageEditModal from './components/ImageEditModal'
-import Lightbox from './components/Lightbox'
-import SettingsModal from './components/SettingsModal'
-import ConfirmDialog from './components/ConfirmDialog'
-import Toast from './components/Toast'
-import ImageContextMenu from './components/ImageContextMenu'
+import { Header } from './app/components'
+import { ImageContextMenu, TaskGrid } from './features/gallery'
+import { InputBar, SearchBar } from './features/input'
+import { SettingsModal } from './features/settings'
+import { DetailModal, ImageEditModal, Lightbox } from './features/viewer'
+import { ConfirmDialog, Toast } from './shared/components'
 
 export default function App() {
   const setSettings = useStore((s) => s.setSettings)

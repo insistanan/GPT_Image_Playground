@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { canEditTaskOutputs, type TaskRecord } from '../types'
+import { canEditTaskOutputs, type TaskRecord } from '../../../types'
 
 interface Props {
   task: TaskRecord | null

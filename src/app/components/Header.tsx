@@ -1,4 +1,4 @@
-import { useStore } from '../store'
+import { useStore } from '../../store'
 
 export default function Header() {
   const setShowSettings = useStore((s) => s.setShowSettings)

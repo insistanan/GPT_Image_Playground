@@ -1,5 +1,5 @@
-import { useStore } from '../store'
-import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
+import { useStore } from '../../store'
+import { useCloseOnEscape } from '../../hooks/useCloseOnEscape'
 
 export default function ConfirmDialog() {
   const confirmDialog = useStore((s) => s.confirmDialog)

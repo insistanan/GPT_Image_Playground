@@ -1,10 +1,10 @@
-import type { CategoryConfig, TaskRecord } from '../types'
+import type { CategoryConfig, TaskRecord } from '../../../types'
 import {
   UNCATEGORIZED_CATEGORY_FILTER,
   resolveTaskCategoryName,
-} from '../types'
-import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
-import Select from './Select'
+} from '../../../types'
+import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
+import Select from '../../../shared/components/Select'
 
 interface Props {
   task: TaskRecord | null

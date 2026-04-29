@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { calculateImageSize, normalizeImageSize, parseRatio, type SizeTier } from '../lib/size'
+import { calculateImageSize, normalizeImageSize, parseRatio, type SizeTier } from '../../../lib/size'
 
 const TIERS: SizeTier[] = ['1K', '2K', '4K']
 const RATIOS = [

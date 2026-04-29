@@ -6,15 +6,15 @@ import {
   addImageFromUrl,
   clearInputImageEdit,
   reopenImageEditorFromInputImage,
-} from '../store'
+} from '../../../store'
 import {
   ALL_CATEGORY_FILTER,
   DEFAULT_PARAMS,
   FAVORITES_CATEGORY_FILTER,
   resolveCategoryFilterName,
-} from '../types'
-import { normalizeImageSize } from '../lib/size'
-import Select from './Select'
+} from '../../../types'
+import { normalizeImageSize } from '../../../lib/size'
+import Select from '../../../shared/components/Select'
 import SizePickerModal from './SizePickerModal'
 
 /** 通用悬浮气泡提示 */

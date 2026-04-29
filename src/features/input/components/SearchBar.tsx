@@ -5,15 +5,15 @@ import {
   removeTasks,
   renameCategory,
   useStore,
-} from '../store'
+} from '../../../store'
 import {
   ALL_CATEGORY_FILTER,
   FAVORITES_CATEGORY_FILTER,
   UNCATEGORIZED_CATEGORY_FILTER,
   isTaskInRecycleBin,
   resolveCategoryFilterName,
-} from '../types'
-import Select from './Select'
+} from '../../../types'
+import Select from '../../../shared/components/Select'
 
 type CategoryEditorMode = 'idle' | 'create' | 'rename'
 

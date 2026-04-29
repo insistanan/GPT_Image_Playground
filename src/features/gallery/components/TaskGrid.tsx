@@ -8,7 +8,7 @@ import {
   resolveCategoryFilterName,
   resolveTaskCategoryName,
   resolveTaskProviderName,
-} from '../types'
+} from '../../../types'
 import {
   useStore,
   reuseConfig,
@@ -25,9 +25,9 @@ import {
   purgeTasks,
   restoreTask,
   restoreTasks,
-} from '../store'
+} from '../../../store'
 import MoveCategoryModal from './MoveCategoryModal'
-import Select from './Select'
+import Select from '../../../shared/components/Select'
 import TaskCard from './TaskCard'
 import TaskContextMenu from './TaskContextMenu'
 

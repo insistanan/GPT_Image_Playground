@@ -5,10 +5,10 @@ import {
   ensureImageCached,
   getCachedImage,
   useStore,
-} from '../store'
-import type { ImageEditSelection } from '../types'
-import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
-import Select from './Select'
+} from '../../../store'
+import type { ImageEditSelection } from '../../../types'
+import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
+import Select from '../../../shared/components/Select'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))

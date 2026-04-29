@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { useStore } from '../store'
+import { useStore } from '../../../store'
 
 export default function ImageContextMenu() {
   const [menuInfo, setMenuInfo] = useState<{ src: string; x: number; y: number } | null>(null)

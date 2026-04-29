@@ -8,9 +8,9 @@ import {
   resolveTaskTransportLabel,
   resolveTaskTransportMeta,
   type TaskRecord,
-} from '../types'
-import { getCachedImage, ensureImageCached } from '../store'
-import { formatImageRatio } from '../lib/size'
+} from '../../../types'
+import { getCachedImage, ensureImageCached } from '../../../store'
+import { formatImageRatio } from '../../../lib/size'
 
 interface Props {
   task: TaskRecord

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { normalizeBaseUrl } from '../lib/api'
-import { readClientDevProxyConfig } from '../lib/devProxy'
-import { useStore, exportData, importData, clearAllData } from '../store'
+import { normalizeBaseUrl } from '../../../lib/api'
+import { readClientDevProxyConfig } from '../../../lib/devProxy'
+import { useStore, exportData, importData, clearAllData } from '../../../store'
 import {
   DEFAULT_SETTINGS,
   type AppSettings,
@@ -10,9 +10,9 @@ import {
   type ResponsesImageInputMode,
   type ResponsesPromptRevisionMode,
   type ResponsesTransportMode,
-} from '../types'
-import { useCloseOnEscape } from '../hooks/useCloseOnEscape'
-import Select from './Select'
+} from '../../../types'
+import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
+import Select from '../../../shared/components/Select'
 
 const API_PROTOCOL_OPTIONS: Array<{ label: string; value: ApiProtocol }> = [
   { label: 'Images API', value: 'images' },
