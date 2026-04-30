@@ -14,16 +14,13 @@ import {
   FAVORITES_CATEGORY_FILTER,
   UNCATEGORIZED_CATEGORY_FILTER,
 } from '../types'
+import { isRecord } from '../lib/guards'
+import { isRemoteImageUrl } from '../lib/imageUrl'
 import type { PersistedAppStateSnapshot } from './contracts'
 import { DEFAULT_PROVIDER_NAME, genId } from './constants'
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-export function isRemoteImageUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value)
-}
+export { isRecord } from '../lib/guards'
+export { isRemoteImageUrl } from '../lib/imageUrl'
 
 function genProviderId(): string {
   return `provider-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`

@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   CategoryConfig,
+  GalleryDisplayMode,
   ImageEditSession,
   InputImage,
   PromptLibraryItem,
@@ -53,6 +54,8 @@ export interface AppState {
   setFilterStatus: (status: AppState['filterStatus']) => void
   taskView: TaskView
   setTaskView: (view: TaskView) => void
+  galleryDisplayMode: GalleryDisplayMode
+  setGalleryDisplayMode: (mode: GalleryDisplayMode) => void
 
   imageEditSession: ImageEditSession | null
   setImageEditSession: (session: ImageEditSession | null) => void
@@ -88,6 +91,7 @@ export type PersistedAppStateSnapshot = Partial<
     | 'activeCategoryFilter'
     | 'params'
     | 'promptLibrary'
+    | 'galleryDisplayMode'
   >
 > &
   Record<string, unknown>

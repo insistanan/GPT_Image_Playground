@@ -1,15 +1,9 @@
 import { zipSync, unzipSync, strFromU8, strToU8 } from 'fflate'
 import {
-  clearImages,
   clearTasks as dbClearTasks,
-  getAllImageRecords,
   getAllTasks,
-  hashDataUrl,
   putTask,
-  storeImageBlob,
-  storeRemoteImage,
 } from '../lib/db'
-import { buildImageThumbnail } from '../lib/imagePreview'
 import type {
   AppSettings,
   CategoryConfig,
@@ -19,8 +13,6 @@ import type {
   StoredImage,
   TaskParams,
 } from '../types'
-import { DEFAULT_PARAMS } from '../types'
-import { clearImageCaches, setCachedImage, setCachedImageMetadata } from './cache'
 import {
   getImportedCategoriesFromExport,
   getImportedPromptLibraryFromExport,
@@ -31,9 +23,22 @@ import {
   mergeImportedProviders,
   remapImportedTaskRelations,
 } from './domain'
+import {
+  clearImageAssets,
+  listImageAssetRecords,
+  saveImageAssetBlob,
+  saveRemoteImageAsset,
+  stageImageAssetReference,
+} from './imageAssets'
 import { buildPersistedAppStateSnapshot, readPersistedAppStateSnapshot } from './persistedState'
 import { useStore } from './state'
 import { repairCategoryStateFromTasks } from './taskStoreUtils'
+import {
+  getImageExtensionFromMimeType,
+  getImageMimeTypeFromPath,
+} from '../lib/imageMime'
+import { isRemoteImageUrl } from '../lib/imageUrl'
+import { DEFAULT_PARAMS } from './taskParams'
 
 interface PreparedImportedRemoteImage {
   id: string
@@ -52,13 +57,6 @@ interface PreparedImportedBlobImage {
 
 type PreparedImportedImage = PreparedImportedRemoteImage | PreparedImportedBlobImage
 
-const MIME_BY_EXTENSION: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-}
-
 function toOwnedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const ownedBytes = new Uint8Array(bytes.length)
   ownedBytes.set(bytes)
@@ -67,8 +65,7 @@ function toOwnedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 export async function clearAllData() {
   await dbClearTasks()
-  await clearImages()
-  clearImageCaches()
+  await clearImageAssets()
 
   const {
     setTasks,
@@ -119,23 +116,11 @@ async function blobToBytes(blob: Blob): Promise<Uint8Array> {
 }
 
 function resolveExtensionFromMimeType(mimeType: string | null | undefined): string {
-  if (!mimeType) {
-    return 'png'
-  }
-
-  const normalizedMime = mimeType.toLowerCase()
-  const match = Object.entries(MIME_BY_EXTENSION).find(([, value]) => value === normalizedMime)
-  if (match) {
-    return match[0]
-  }
-
-  const subtype = normalizedMime.split('/')[1]
-  return subtype || 'png'
+  return getImageExtensionFromMimeType(mimeType)
 }
 
 function resolveMimeTypeFromPath(filePath: string, fallbackMimeType?: string | null): string {
-  const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
-  return MIME_BY_EXTENSION[ext] ?? fallbackMimeType ?? 'image/png'
+  return getImageMimeTypeFromPath(filePath, fallbackMimeType ?? 'image/png')
 }
 
 function createImageArchivePath(id: string, mimeType: string | null | undefined, suffix?: string): string {
@@ -162,10 +147,6 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
     return value
   }
   return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
-function isRemoteImageUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value)
 }
 
 async function exportImageRecord(
@@ -287,7 +268,7 @@ async function prepareImportedImage(
 
 async function writeImportedImage(image: PreparedImportedImage): Promise<string> {
   if (image.mode === 'remote_url') {
-    const storedId = await storeRemoteImage(image.remoteUrl, {
+    return saveRemoteImageAsset(image.remoteUrl, {
       id: image.id,
       createdAt: normalizeOptionalFiniteNumber(image.info.createdAt) ?? undefined,
       source: normalizeOptionalSource(image.info.source),
@@ -297,30 +278,15 @@ async function writeImportedImage(image: PreparedImportedImage): Promise<string>
       height: normalizeOptionalFiniteNumber(image.info.height) ?? null,
       contentHash: normalizeOptionalString(image.info.contentHash),
     })
-    setCachedImage(storedId, image.remoteUrl)
-    return storedId
   }
 
-  let thumbnailBlob = image.thumbnailBlob ?? null
-  let width = normalizeOptionalFiniteNumber(image.info.width) ?? null
-  let height = normalizeOptionalFiniteNumber(image.info.height) ?? null
-  let thumbnailWidth: number | null = null
-  let thumbnailHeight: number | null = null
+  const thumbnailBlob = image.thumbnailBlob ?? null
+  const width = normalizeOptionalFiniteNumber(image.info.width) ?? null
+  const height = normalizeOptionalFiniteNumber(image.info.height) ?? null
+  const thumbnailWidth: number | null = null
+  const thumbnailHeight: number | null = null
 
-  if (!thumbnailBlob || !width || !height) {
-    try {
-      const generatedThumbnail = await buildImageThumbnail(image.originalBlob)
-      thumbnailBlob ??= generatedThumbnail.thumbnailBlob
-      width ??= generatedThumbnail.width
-      height ??= generatedThumbnail.height
-      thumbnailWidth = generatedThumbnail.thumbnailWidth
-      thumbnailHeight = generatedThumbnail.thumbnailHeight
-    } catch (error) {
-      console.error(`导入图片 ${image.id} 时生成缩略图失败，将继续导入原图。`, error)
-    }
-  }
-
-  const storedId = await storeImageBlob(image.originalBlob, {
+  return saveImageAssetBlob(image.originalBlob, {
     id: image.id,
     createdAt: normalizeOptionalFiniteNumber(image.info.createdAt) ?? undefined,
     source: normalizeOptionalSource(image.info.source),
@@ -334,22 +300,12 @@ async function writeImportedImage(image: PreparedImportedImage): Promise<string>
     thumbnailWidth,
     thumbnailHeight,
   })
-
-  setCachedImage(storedId, image.originalBlob, 'original')
-  if (thumbnailBlob) {
-    setCachedImage(storedId, thumbnailBlob, 'thumbnail')
-  }
-  if (width && height) {
-    setCachedImageMetadata(storedId, { width, height })
-  }
-
-  return storedId
 }
 
 export async function exportData() {
   try {
     const tasks = await getAllTasks()
-    const images = await getAllImageRecords()
+    const images = await listImageAssetRecords()
     const appStateSnapshot = buildPersistedAppStateSnapshot(useStore.getState())
     const exportedAt = Date.now()
     const imageCreatedAtFallback = new Map<string, number>()
@@ -372,7 +328,7 @@ export async function exportData() {
     }
 
     const manifest: ExportData = {
-      version: 7,
+      version: 9,
       exportedAt: new Date(exportedAt).toISOString(),
       settings: appStateSnapshot.settings as AppSettings,
       providers: appStateSnapshot.providers as ProviderConfig[] | undefined,
@@ -521,8 +477,7 @@ export async function addImageFromFile(file: File): Promise<void> {
   }
 
   const dataUrl = await fileToDataUrl(file)
-  const id = await hashDataUrl(dataUrl)
-  setCachedImage(id, dataUrl)
+  const id = await stageImageAssetReference(dataUrl)
   useStore.getState().addInputImage({ id, dataUrl })
 }
 
@@ -548,8 +503,7 @@ export function normalizeImageUrl(url: string): string {
 
 export async function addImageFromUrl(url: string): Promise<void> {
   const normalizedUrl = normalizeImageUrl(url)
-  const id = await hashDataUrl(normalizedUrl)
-  setCachedImage(id, normalizedUrl)
+  const id = await stageImageAssetReference(normalizedUrl)
   useStore.getState().addInputImage({ id, dataUrl: normalizedUrl })
 }
 

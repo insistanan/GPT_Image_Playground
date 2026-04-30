@@ -1,7 +1,6 @@
-import { normalizeImageSize } from '../lib/size'
 import type { ImageEditSelection, ImageEditSession, InputImage, TaskRecord } from '../types'
-import { ensureImageDataUrl } from './cache'
-import { findProviderById } from './domain'
+import { writeImageEditDraft } from './taskDraft'
+import { ensureImageAssetDataUrl } from './imageAssets'
 import { submitTask } from './runtime'
 import { useStore } from './state'
 
@@ -15,7 +14,7 @@ export async function editOutputs(task: TaskRecord, preferredImageId?: string) {
     return
   }
 
-  const sourceImageDataUrl = await ensureImageDataUrl(sourceImageId)
+  const sourceImageDataUrl = await ensureImageAssetDataUrl(sourceImageId)
   if (!sourceImageDataUrl) {
     showToast('输出图读取失败，无法进入编辑器', 'error')
     return
@@ -27,6 +26,8 @@ export async function editOutputs(task: TaskRecord, preferredImageId?: string) {
     sourceImageId,
     sourceImageDataUrl,
     sourceImageIds: [...task.outputImages],
+    lineageParentTaskId: task.id,
+    lineageParentImageId: sourceImageId,
     prompt: task.prompt,
     params: task.params,
     initialSelection: task.editSelection ?? null,
@@ -54,6 +55,8 @@ export function reopenImageEditorFromInputImage(inputImage: InputImage) {
     sourceImageIds: sourceTask?.outputImages
       ? [...sourceTask.outputImages]
       : [inputImage.sourceImageId ?? inputImage.id],
+    lineageParentTaskId: inputImage.lineageParentTaskId ?? inputImage.sourceTaskId ?? null,
+    lineageParentImageId: inputImage.lineageParentImageId ?? inputImage.sourceImageId ?? inputImage.id,
     prompt: sourceTask?.prompt ?? prompt.trim(),
     params: sourceTask?.params ?? params,
     initialSelection: inputImage.editSelection ?? null,
@@ -99,39 +102,36 @@ export async function applyImageEditToInput(options: {
   sourceSize?: string
   submit?: boolean
 }) {
+  const state = useStore.getState()
   const {
-    providers,
     setActiveProvider,
     setPrompt,
     setParams,
     setInputImages,
     setImageEditSession,
     showToast,
-  } = useStore.getState()
+  } = state
 
-  const provider = findProviderById(providers, options.providerId ?? options.session.providerId)
-  if (provider) {
-    setActiveProvider(provider.id)
+  const draft = writeImageEditDraft({
+    snapshot: {
+      providers: state.providers,
+      activeProviderId: state.activeProviderId,
+    },
+    session: options.session,
+    prompt: options.prompt,
+    providerId: options.providerId,
+    maskDataUrl: options.maskDataUrl,
+    selection: options.selection,
+    sourceSize: options.sourceSize,
+  })
+
+  if (draft.nextProviderId) {
+    setActiveProvider(draft.nextProviderId)
   }
 
-  setPrompt(options.prompt.trim())
-  setParams({
-    ...options.session.params,
-    n: 1,
-    size: options.sourceSize
-      ? normalizeImageSize(options.sourceSize) || options.session.params.size
-      : options.session.params.size,
-  })
-  setInputImages([
-    {
-      id: options.session.sourceImageId,
-      dataUrl: options.session.sourceImageDataUrl,
-      maskDataUrl: options.maskDataUrl ?? null,
-      editSelection: options.selection ?? null,
-      sourceTaskId: options.session.taskId,
-      sourceImageId: options.session.sourceImageId,
-    },
-  ])
+  setPrompt(draft.nextPrompt)
+  setParams(draft.nextParams)
+  setInputImages(draft.nextInputImages)
   setImageEditSession(null)
   showToast(
     options.submit

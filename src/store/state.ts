@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ALL_CATEGORY_FILTER, DEFAULT_PARAMS } from '../types'
-import { deleteCachedImage } from './cache'
+import { ALL_CATEGORY_FILTER } from '../types'
 import type { AppState } from './contracts'
 import {
   createPromptLibraryItem,
@@ -14,7 +13,9 @@ import {
   normalizeProviderList,
   resolveActiveCategoryFilter,
 } from './domain'
+import { evictImageAsset } from './imageAssets'
 import { buildPersistedAppStateSnapshot, mergePersistedAppState } from './persistedState'
+import { DEFAULT_PARAMS } from './taskParams'
 
 export const useStore = create<AppState>()(
   persist(
@@ -135,7 +136,7 @@ export const useStore = create<AppState>()(
       clearInputImages: () =>
         set((state) => {
           for (const image of state.inputImages) {
-            deleteCachedImage(image.id)
+            evictImageAsset(image.id)
           }
           return { inputImages: [] }
         }),
@@ -209,6 +210,8 @@ export const useStore = create<AppState>()(
           imageEditSession: null,
           detailTaskId: null,
         }),
+      galleryDisplayMode: 'standard',
+      setGalleryDisplayMode: (galleryDisplayMode) => set({ galleryDisplayMode }),
 
       imageEditSession: null,
       setImageEditSession: (imageEditSession) => set({ imageEditSession }),

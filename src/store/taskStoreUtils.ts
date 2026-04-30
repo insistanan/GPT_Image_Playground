@@ -1,8 +1,7 @@
 import { putTask } from '../lib/db'
-import type { InputImage, TaskRecord } from '../types'
+import type { TaskRecord } from '../types'
 import { useStore } from './state'
 import {
-  getTaskReferencedImageIds,
   mergeCategoriesFromTasks,
   resolveActiveCategoryFilter,
 } from './domain'
@@ -17,24 +16,33 @@ export function updateTaskInStore(taskId: string, patch: Partial<TaskRecord>) {
   }
 }
 
-export function collectReferencedImageIds(tasks: TaskRecord[], inputImages: InputImage[]): Set<string> {
-  const referenced = new Set<string>()
-  for (const task of tasks) {
-    for (const id of getTaskReferencedImageIds(task)) {
-      referenced.add(id)
-    }
-  }
-  for (const image of inputImages) {
-    referenced.add(image.id)
-  }
-  return referenced
-}
-
 export function clearTaskUiState(taskIds: Set<string>) {
   useStore.setState((state) => ({
     selectedTaskIds: state.selectedTaskIds.filter((id) => !taskIds.has(id)),
     detailTaskId:
       state.detailTaskId && taskIds.has(state.detailTaskId) ? null : state.detailTaskId,
+  }))
+}
+
+export function clearPurgedTaskUiState(taskIds: Set<string>, deletedImageIds: Set<string>) {
+  clearTaskUiState(taskIds)
+  useStore.setState((state) => ({
+    imageEditSession:
+      state.imageEditSession == null
+        ? null
+        : deletedImageIds.has(state.imageEditSession.sourceImageId)
+          ? null
+          : {
+              ...state.imageEditSession,
+              sourceImageIds: state.imageEditSession.sourceImageIds?.filter(
+                (imageId) => !deletedImageIds.has(imageId),
+              ) ?? state.imageEditSession.sourceImageIds,
+            },
+    lightboxImageId:
+      state.lightboxImageId && deletedImageIds.has(state.lightboxImageId)
+        ? null
+        : state.lightboxImageId,
+    lightboxImageList: state.lightboxImageList.filter((imageId) => !deletedImageIds.has(imageId)),
   }))
 }
 

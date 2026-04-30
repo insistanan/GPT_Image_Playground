@@ -6,7 +6,9 @@ import type {
   StoredRemoteUrlImage,
   TaskRecord,
 } from '../types'
+import { isRecord } from './guards'
 import { buildImageThumbnail } from './imagePreview'
+import { isRemoteImageUrl } from './imageUrl'
 
 const DB_NAME = 'gpt-image-playground'
 const DB_VERSION = 3
@@ -867,10 +869,6 @@ function resolveWriteCreatedAt(createdAt: number | undefined, defaultNow: boolea
   throw new Error('createdAt 必须是有限数字')
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 function assertBlob(value: unknown, field: string): asserts value is Blob {
   if (!(value instanceof Blob)) {
     throw new Error(`${field} 必须是 Blob`)
@@ -887,15 +885,6 @@ function normalizeDataUrl(value: string): string {
     throw new Error('只支持合法的 data URL 图片内容')
   }
   return trimmed
-}
-
-function isRemoteImageUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value.trim())
-    return /^https?:$/i.test(parsed.protocol)
-  } catch {
-    return false
-  }
 }
 
 function normalizeRemoteImageUrl(value: string): string {

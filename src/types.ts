@@ -1,3 +1,9 @@
+import {
+  UNCATEGORIZED_CATEGORY_NAME,
+  UNKNOWN_TASK_PROVIDER_NAME,
+} from './store/taskRecordConstants'
+import { DEFAULT_PARAMS } from './store/taskParams'
+
 // ===== 设置 =====
 
 export interface AppSettings {
@@ -19,6 +25,7 @@ export type ResponsesTransportMode = 'auto' | 'stream' | 'json'
 export type ResponsesImageInputMode = 'auto' | 'file_id'
 export type ResponsesPromptRevisionMode = 'allow' | 'compat'
 export type TaskView = 'gallery' | 'trash'
+export type GalleryDisplayMode = 'standard' | 'image'
 
 export interface ImageEditSelection {
   x: number
@@ -33,6 +40,8 @@ export interface ImageEditSession {
   sourceImageId: string
   sourceImageDataUrl: string
   sourceImageIds?: string[] | null
+  lineageParentTaskId?: string | null
+  lineageParentImageId?: string | null
   prompt: string
   params: TaskParams
   initialSelection?: ImageEditSelection | null
@@ -60,8 +69,7 @@ export interface PromptLibraryItem {
 export const ALL_CATEGORY_FILTER = '__all__'
 export const FAVORITES_CATEGORY_FILTER = '__favorites__'
 export const UNCATEGORIZED_CATEGORY_FILTER = '__uncategorized__'
-export const UNCATEGORIZED_CATEGORY_NAME = '未分类'
-export const UNKNOWN_TASK_PROVIDER_NAME = '未记录供应商'
+export { DEFAULT_PARAMS, UNCATEGORIZED_CATEGORY_NAME, UNKNOWN_TASK_PROVIDER_NAME }
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_DEFAULT_API_URL?.trim() || 'https://api.openai.com'
 const DEFAULT_REQUEST_MODE: RequestMode = import.meta.env.DEV ? 'local_proxy' : 'direct'
@@ -88,15 +96,6 @@ export interface TaskParams {
   output_compression: number | null
   moderation: 'auto' | 'low'
   n: number
-}
-
-export const DEFAULT_PARAMS: TaskParams = {
-  size: 'auto',
-  quality: 'auto',
-  output_format: 'png',
-  output_compression: null,
-  moderation: 'auto',
-  n: 1,
 }
 
 export interface AppliedImageParams {
@@ -193,14 +192,20 @@ export interface InputImage {
   /** 追踪它来自哪条任务/哪张输出图，方便回到编辑器继续调整 */
   sourceTaskId?: string | null
   sourceImageId?: string | null
+  /** 输入区内部保留的父任务链信息，后续手动提交时优先据此建立 lineage */
+  lineageParentTaskId?: string | null
+  lineageParentImageId?: string | null
 }
 
 // ===== 任务记录 =====
 
 export type TaskStatus = 'running' | 'done' | 'error' | 'partial_error'
+export type TaskKind = 'generation' | 'image'
 
 export interface TaskRecord {
   id: string
+  /** 任务类型：普通生成任务 / 单图任务 */
+  taskKind?: TaskKind
   /** 任务提交时选中的供应商 ID */
   providerId?: string | null
   /** 任务提交时记录的供应商名称快照 */
@@ -213,6 +218,10 @@ export interface TaskRecord {
   deletedAt?: number | null
   /** 收藏状态，独立于分类存在 */
   isFavorite?: boolean
+  /** 这条任务直接来源于哪条上游任务，例如编辑输出后新建的任务 */
+  parentTaskId?: string | null
+  /** 若这条任务来源于上游任务中的某张图片，则记录那张图片 id */
+  parentImageId?: string | null
   prompt: string
   params: TaskParams
   /** 输入图片的 image store id 列表 */
@@ -328,63 +337,6 @@ export interface ImageApiResponse {
   data: ImageResponseItem[]
 }
 
-type DisplayTaskImageParamKey = keyof Pick<TaskParams, 'size' | 'quality' | 'output_format'>
-
-function normalizeOptionalText(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null
-}
-
-export function resolveTaskAppliedImageParam(
-  task: Pick<TaskRecord, 'responseMeta'>,
-  key: keyof AppliedImageParams,
-): string | null {
-  return normalizeOptionalText(task.responseMeta?.appliedImageParams?.[key])
-}
-
-export function resolveTaskDisplayImageParam(
-  task: Pick<TaskRecord, 'params' | 'responseMeta'>,
-  key: DisplayTaskImageParamKey,
-): string {
-  return resolveTaskAppliedImageParam(task, key) ?? task.params[key]
-}
-
-export function resolveTaskTransportMeta(
-  task: Pick<TaskRecord, 'responseMeta'>,
-): AppliedTransportMeta | null {
-  const transport = task.responseMeta?.transport
-  if (!transport) return null
-
-  const requested =
-    transport.requested === 'stream' || transport.requested === 'json' || transport.requested === 'auto'
-      ? transport.requested
-      : null
-  const actual = transport.actual === 'stream' || transport.actual === 'json' ? transport.actual : null
-  const fallbackFromStream = typeof transport.fallbackFromStream === 'boolean' ? transport.fallbackFromStream : null
-
-  if (!requested && !actual && fallbackFromStream == null) {
-    return null
-  }
-
-  return {
-    requested,
-    actual,
-    fallbackFromStream,
-  }
-}
-
-export function resolveTaskTransportLabel(
-  task: Pick<TaskRecord, 'responseMeta'>,
-): string | null {
-  const transport = resolveTaskTransportMeta(task)
-  if (!transport?.actual) return null
-
-  if (transport.actual === 'stream') {
-    return '流式'
-  }
-
-  return transport.fallbackFromStream ? 'JSON（降级）' : 'JSON'
-}
-
 // ===== 导出数据 =====
 
 /** ZIP manifest.json 格式 */
@@ -404,38 +356,6 @@ export interface ExportData {
   imageFiles: Record<string, ExportImageFileEntry>
 }
 
-export function resolveTaskProviderName(
-  task: Pick<TaskRecord, 'providerId' | 'providerName'>,
-  providers: ProviderConfig[],
-): string {
-  const snapshotName = task.providerName?.trim()
-  if (snapshotName) return snapshotName
-
-  if (task.providerId) {
-    const provider = providers.find((item) => item.id === task.providerId)
-    if (provider?.name?.trim()) {
-      return provider.name.trim()
-    }
-  }
-
-  return UNKNOWN_TASK_PROVIDER_NAME
-}
-
-export function resolveTaskCategoryName(
-  task: Pick<TaskRecord, 'categoryId' | 'categoryName'>,
-  categories: CategoryConfig[],
-): string {
-  if (task.categoryId) {
-    const category = categories.find((item) => item.id === task.categoryId)
-    if (category?.name?.trim()) {
-      return category.name.trim()
-    }
-  }
-
-  const snapshotName = task.categoryName?.trim()
-  return snapshotName || UNCATEGORIZED_CATEGORY_NAME
-}
-
 export function resolveCategoryFilterName(
   filter: string,
   categories: CategoryConfig[],
@@ -448,43 +368,16 @@ export function resolveCategoryFilterName(
   return category?.name?.trim() || UNCATEGORIZED_CATEGORY_NAME
 }
 
-export function isTaskInRecycleBin(task: Pick<TaskRecord, 'deletedAt'>): boolean {
-  return typeof task.deletedAt === 'number' && Number.isFinite(task.deletedAt)
-}
-
-export function resolveTaskStatusLabel(
-  task: Pick<TaskRecord, 'status' | 'isAborted'>,
-): '生成中' | '已完成' | '失败' | '已中止' | '异常' {
-  if (task.status === 'done') return '已完成'
-  if (task.status === 'error' && task.isAborted) return '已中止'
-  if (task.status === 'partial_error') return '异常'
-  if (task.status === 'error') return '失败'
-  return '生成中'
-}
-
-export function resolveTaskImageProgress(
-  task: Pick<TaskRecord, 'params' | 'outputImages'>,
-): TaskImageProgress {
-  const requestedTotal =
-    typeof task.params?.n === 'number' && Number.isFinite(task.params.n)
-      ? Math.max(1, Math.floor(task.params.n))
-      : 1
-  const completed = Array.isArray(task.outputImages) ? task.outputImages.length : 0
-  const total = Math.max(requestedTotal, completed, 1)
-
-  return {
-    completed,
-    total,
-    countLabel: total > 1 ? `${completed}/${total}` : null,
-  }
-}
-
-export function canEditTaskOutputs(
-  task: Pick<TaskRecord, 'status' | 'outputImages'>,
-): boolean {
-  return (
-    (task.status === 'done' || task.status === 'partial_error') &&
-    Array.isArray(task.outputImages) &&
-    task.outputImages.length > 0
-  )
-}
+export {
+  canEditTaskOutputs,
+  isTaskInRecycleBin,
+  resolveTaskAppliedImageParam,
+  resolveTaskCategoryName,
+  resolveTaskDisplayImageParam,
+  resolveTaskImageProgress,
+  resolveTaskKind,
+  resolveTaskProviderName,
+  resolveTaskStatusLabel,
+  resolveTaskTransportLabel,
+  resolveTaskTransportMeta,
+} from './store/taskRecords'
