@@ -6,7 +6,11 @@ import {
   sanitizeDebugValue,
 } from './debug'
 import { createApiError, emitFinalImages } from './imageTransforms'
-import { parseImagesFromPayload } from './imagePayload'
+import {
+  buildTaskResponseMetaFromCalls,
+  collectImageGenerationCallsFromPayload,
+  parseImagesFromPayload,
+} from './imagePayload'
 import { readImagesPayload } from './payloadText'
 import { createImagesPlanner, mergeTaskResponseTransportMeta } from './requestPlanner'
 import { buildImagesRequestSpec } from './imagesRequestBuilder'
@@ -82,6 +86,9 @@ export async function callImagesApi(
       const payload = streamResult?.payload ?? (await readImagesPayload(response, debugLogEntry))
       const streamedImages = streamResult?.streamedImages ?? []
       actualTransport = streamResult?.actualTransport ?? 'json'
+      const responseMetaFromCalls = buildTaskResponseMetaFromCalls(
+        collectImageGenerationCallsFromPayload(payload),
+      )
       const images: ApiImageAsset[] =
         actualTransport === 'stream' && streamedImages.length > 0
           ? streamedImages
@@ -102,7 +109,7 @@ export async function callImagesApi(
       return {
         images,
         responseMeta: mergeTaskResponseTransportMeta(
-          undefined,
+          responseMetaFromCalls,
           planner.completeSuccess(actualTransport),
         ),
       }

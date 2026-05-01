@@ -57,6 +57,14 @@ const IMAGE_GENERATION_CALL_META_STRING_FIELDS = [
   'action',
   'revised_prompt',
 ] as const
+const IMAGE_GENERATION_CALL_META_HINT_FIELDS = [
+  'size',
+  'quality',
+  'output_format',
+  'background',
+  'action',
+  'revised_prompt',
+] as const
 
 export function readOptionalText(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null
@@ -198,10 +206,44 @@ export function buildResponsesOutputItemFromFieldReaders(
   readNumber: ReadNumberField,
 ): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {}
-  copyOptionalStringFields(sanitized, readString, RESPONSE_OUTPUT_ITEM_STRING_FIELDS)
+  const normalizedType = readString('type')
+  if (normalizedType && !normalizedType.startsWith('response.')) {
+    sanitized.type = normalizedType
+  } else {
+    sanitized.type = 'image_generation_call'
+  }
+  copyOptionalStringFields(
+    sanitized,
+    (fieldName) => (fieldName === 'type' ? undefined : readString(fieldName)),
+    RESPONSE_OUTPUT_ITEM_STRING_FIELDS,
+  )
   copyOptionalNumberFields(sanitized, readNumber, RESPONSE_OUTPUT_ITEM_NUMBER_FIELDS)
 
   return Object.keys(sanitized).length > 0 ? sanitized : { type: 'image_generation_call' }
+}
+
+function isImageGenerationCallLikeItem(item: Record<string, unknown>): boolean {
+  const normalizedType = readOptionalText(item.type)
+  if (normalizedType === 'image_generation_call') {
+    return true
+  }
+
+  if (hasUsableImagePayload(item)) {
+    return true
+  }
+
+  const hasMetaHints = IMAGE_GENERATION_CALL_META_HINT_FIELDS.some(
+    (fieldName) => readOptionalText(item[fieldName]) != null,
+  )
+  if (!hasMetaHints) {
+    return false
+  }
+
+  return (
+    readOptionalText(item.id) != null ||
+    (typeof item.output_index === 'number' && Number.isFinite(item.output_index)) ||
+    (normalizedType != null && normalizedType.startsWith('response.'))
+  )
 }
 
 export function sanitizeResponsesOutputItem(
@@ -216,7 +258,7 @@ export function sanitizeResponsesOutputItem(
 export function extractImageGenerationCallMeta(
   item: Record<string, unknown>,
 ): ResponseImageGenerationCallMeta | null {
-  if (item.type !== 'image_generation_call') {
+  if (!isImageGenerationCallLikeItem(item)) {
     return null
   }
 
