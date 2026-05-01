@@ -8,18 +8,21 @@
 
 ## 界面预览
 
-<div align="center">
-  <b>主界面</b><br>
-  <img src="docs/images/example_1.png" alt="主界面" />
-</div>
+<details>
+  <summary>查看主界面截图</summary>
+  <div align="center">
+    <br>
+    <img src="docs/images/example_1.png" alt="主界面" />
+  </div>
+</details>
 
-<br>
-
-<div align="center">
-  <b>任务详情</b><br>
-  <img src="docs/images/example_2.png" alt="任务详情" />
-</div>
-<br>
+<details>
+  <summary>查看任务详情截图</summary>
+  <div align="center">
+    <br>
+    <img src="docs/images/example_2.png" alt="任务详情" />
+  </div>
+</details>
 
 
 ## 为什么是它
