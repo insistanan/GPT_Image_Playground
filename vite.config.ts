@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { readFileSync } from 'fs'
 import { appendFile, mkdir } from 'fs/promises'
 import type { IncomingMessage, ServerResponse } from 'http'

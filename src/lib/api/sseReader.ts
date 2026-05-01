@@ -1,39 +1,12 @@
 import { isRecord } from '../guards'
-import type {
-  ApiImageAsset,
-  ApiDebugRequestLogEntry,
-  ParsedSseEvent,
-  ResponsesStreamImageEvent,
-  StreamedPayloadResult,
-} from './types'
-import {
-  attachDebugResponseMeta,
-  sanitizeDebugValue,
-} from './debug'
+import { sanitizeDebugValue, attachDebugResponseMeta } from './debug'
 import { extractErrorMessage } from './errors'
-export {
-  attachLocalDebugToError,
-  buildApiErrorFromResponse,
-  createDebugRequestLogEntry,
-  isSseResponse,
-  readDevProxyRequestId,
-} from './debug'
-export {
-  buildTaskResponseMetaFromCalls,
-  collectImageGenerationCallsFromPayload,
-  emitNewImagesFromPayload,
-  parseImagesFromPayload,
-} from './imagePayload'
-export {
-  readImagesPayload,
-  readResponsesPayload,
-} from './payloadText'
-export { buildCompactResponsesPayload } from './payloadFacts'
-import { emitNewImagesFromPayload } from './imagePayload'
 import {
-  parseImagesPayloadText,
-  parseResponsesPayloadText,
-} from './payloadText'
+  buildStreamImageEventSignature,
+  createApiError,
+  decodeResponsesOutputDoneImageEventToAsset,
+} from './imageTransforms'
+import { emitNewImagesFromPayload } from './imagePayload'
 import {
   buildCompactResponsesMetaFromFieldReaders,
   buildCompactResponsesPayload,
@@ -43,16 +16,15 @@ import {
   isImagesFailurePayload,
   sanitizeResponsesOutputItem,
 } from './payloadFacts'
-import {
-  consumeSseResponseText,
-  isPartialImageSseEventName,
-  tryParseJson,
-} from './sse'
-import {
-  buildStreamImageEventSignature,
-  createApiError,
-  decodeResponsesOutputDoneImageEventToAsset,
-} from './imageTransforms'
+import { parseImagesPayloadText, parseResponsesPayloadText } from './payloadText'
+import { consumeSseResponseText, isPartialImageSseEventName, tryParseJson } from './sse'
+import type {
+  ApiDebugRequestLogEntry,
+  ApiImageAsset,
+  ParsedSseEvent,
+  ResponsesStreamImageEvent,
+  StreamedPayloadResult,
+} from './types'
 
 const RESPONSES_INCOMPLETE_STREAM_ERROR =
   'Responses API 已返回流式事件，但最后未收到完整结果。请稍后重试；如果持续出现，可切换为 JSON 模式后再试。'
@@ -134,7 +106,9 @@ function extractSseImageNumberField(dataText: string, fieldName: string): number
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function parseResponsesOutputDoneImageEvent(event: ParsedSseEvent): ResponsesStreamImageEvent | null {
+function parseResponsesOutputDoneImageEvent(
+  event: ParsedSseEvent,
+): ResponsesStreamImageEvent | null {
   if (event.event !== 'response.output_item.done' || !event.dataText) {
     return null
   }
@@ -171,8 +145,10 @@ function extractResponsesCompletedMetaFromDataText(dataText: string): Record<str
   )
 }
 
-function sanitizeResponsesCompletedResponse(response: Record<string, unknown>): Record<string, unknown> {
-  return buildCompactResponsesPayload(response, [])
+function sanitizeResponsesCompletedResponse(
+  response: Record<string, unknown>,
+): Record<string, unknown> {
+  return buildCompactResponsesPayload(response)
 }
 
 function buildLargeResponsesCompletedPayload(
@@ -181,20 +157,20 @@ function buildLargeResponsesCompletedPayload(
   lastJsonPayload: Record<string, unknown> | null,
 ): unknown | null {
   if (completedResponse) {
-    return buildCompactResponsesPayload(completedResponse, outputItems)
+    if (outputItems.length > 0) {
+      return buildCompactResponsesPayload(completedResponse, outputItems)
+    }
+    return completedResponse
   }
 
   if (outputItems.length > 0) {
-    return {
-      output: outputItems,
-    }
+    return { output: outputItems }
   }
 
   return lastJsonPayload
 }
 
 function buildResponsesStreamDebugDetails(options: {
-  useSplitStreamPath: boolean
   outputItems: Record<string, unknown>[]
   completedResponse: Record<string, unknown> | null
   lastJsonPayload: Record<string, unknown> | null
@@ -202,7 +178,7 @@ function buildResponsesStreamDebugDetails(options: {
 }): Record<string, unknown> {
   return {
     streamSummary: {
-      usedSplitStreamPath: options.useSplitStreamPath,
+      usedSplitStreamPath: true,
       outputItemCount: options.outputItems.length,
       hasCompletedResponse: options.completedResponse !== null,
       hasLastJsonPayload: options.lastJsonPayload !== null,
@@ -233,7 +209,6 @@ export async function readResponsesPayloadStream(
   response: Response,
   fallbackMime: string,
   signal: AbortSignal,
-  useSplitStreamPath = false,
   logEntry?: ApiDebugRequestLogEntry,
 ): Promise<StreamedPayloadResult> {
   const requestId = attachDebugResponseMeta(logEntry, response)
@@ -249,34 +224,33 @@ export async function readResponsesPayloadStream(
     response,
     signal,
     async (event) => {
-      if (useSplitStreamPath) {
-        if (isPartialImageSseEventName(event.event)) {
-          return
-        }
+      if (isPartialImageSseEventName(event.event)) {
+        return
+      }
 
-        const outputDoneImageEvent = parseResponsesOutputDoneImageEvent(event)
-        if (outputDoneImageEvent?.base64) {
-          const signature = buildStreamImageEventSignature(outputDoneImageEvent)
-          if (!emittedImageSignatures.has(signature)) {
-            const imageAsset = await decodeResponsesOutputDoneImageEventToAsset(
-              outputDoneImageEvent,
-              fallbackMime,
-              signal,
-            )
-            if (imageAsset) {
-              emittedImageSignatures.add(signature)
-              streamedImages.push(imageAsset)
-              streamedFinalImageCount += 1
-            }
+      const outputDoneImageEvent = parseResponsesOutputDoneImageEvent(event)
+      if (outputDoneImageEvent?.base64) {
+        const signature = buildStreamImageEventSignature(outputDoneImageEvent)
+        if (!emittedImageSignatures.has(signature)) {
+          const imageAsset = await decodeResponsesOutputDoneImageEventToAsset(
+            outputDoneImageEvent,
+            fallbackMime,
+            signal,
+          )
+          if (imageAsset) {
+            emittedImageSignatures.add(signature)
+            streamedImages.push(imageAsset)
+            streamedFinalImageCount += 1
           }
         }
       }
 
-      if (useSplitStreamPath && event.event === 'response.output_item.done' && event.dataText) {
+      if (event.event === 'response.output_item.done' && event.dataText) {
         outputItems.push(sanitizeResponsesOutputItemFromDataText(event.dataText))
         return
       }
-      if (useSplitStreamPath && event.event === 'response.completed' && event.dataText) {
+
+      if (event.event === 'response.completed' && event.dataText) {
         completedResponse = extractResponsesCompletedMetaFromDataText(event.dataText)
         if (completedResponse.status === 'failed') {
           failedPayload = {
@@ -284,12 +258,16 @@ export async function readResponsesPayloadStream(
             response: completedResponse,
           }
         }
-        return
       }
 
-      const parsedJson =
-        event.json ??
-        (!isPartialImageSseEventName(event.event) && event.dataText ? tryParseJson(event.dataText) : undefined)
+      const shouldSkipCompletedJsonParsing =
+        event.event === 'response.completed' &&
+        outputItems.length > 0 &&
+        completedResponse?.status !== 'failed'
+      const parsedJson = shouldSkipCompletedJsonParsing
+        ? undefined
+        : event.json ??
+          (event.dataText ? tryParseJson(event.dataText) : undefined)
 
       if (!parsedJson || !isRecord(parsedJson)) {
         return
@@ -298,14 +276,13 @@ export async function readResponsesPayloadStream(
       lastJsonPayload = parsedJson
 
       if (parsedJson.type === 'response.output_item.done' && isRecord(parsedJson.item)) {
-        const outputItem = parsedJson.item as Record<string, unknown>
-        outputItems.push(useSplitStreamPath ? sanitizeResponsesOutputItem(outputItem) : outputItem)
+        outputItems.push(sanitizeResponsesOutputItem(parsedJson.item))
       }
+
       if (parsedJson.type === 'response.completed' && isRecord(parsedJson.response)) {
-        completedResponse = useSplitStreamPath
-          ? sanitizeResponsesCompletedResponse(parsedJson.response as Record<string, unknown>)
-          : (parsedJson.response as Record<string, unknown>)
+        completedResponse = sanitizeResponsesCompletedResponse(parsedJson.response)
       }
+
       if (
         parsedJson.type === 'response.failed' ||
         (isRecord(parsedJson.response) && parsedJson.response.status === 'failed')
@@ -330,18 +307,18 @@ export async function readResponsesPayloadStream(
         },
       )
     },
-    useSplitStreamPath
-      ? {
-          deferJsonParsing: true,
-          discardPartialImageData: true,
-        }
-      : undefined,
+    {
+      deferJsonParsing: true,
+      discardPartialImageData: true,
+    },
   )
 
   if (sawAnyEvents) {
     if (failedPayload !== null) {
-      const currentFailedPayload = failedPayload as Record<string, unknown>
-      const nestedResponse = isRecord(currentFailedPayload.response) ? currentFailedPayload.response : null
+      const currentFailedPayload: Record<string, unknown> = failedPayload
+      const nestedResponse = isRecord(currentFailedPayload.response)
+        ? currentFailedPayload.response
+        : null
       const message =
         extractErrorMessage(currentFailedPayload) ||
         (nestedResponse ? extractErrorMessage(nestedResponse) : null) ||
@@ -357,42 +334,13 @@ export async function readResponsesPayloadStream(
       })
     }
 
-    let payload: unknown
-    if (useSplitStreamPath) {
-      payload = buildLargeResponsesCompletedPayload(completedResponse, outputItems, lastJsonPayload)
-    } else if (completedResponse !== null) {
-      const currentCompletedResponse = completedResponse as Record<string, unknown>
-      const existingOutput = Array.isArray(currentCompletedResponse.output)
-        ? currentCompletedResponse.output
-        : []
-      payload = buildCompactResponsesPayload(
-        currentCompletedResponse,
-        outputItems.length > 0 ? outputItems : existingOutput,
-      )
-    } else if (outputItems.length > 0) {
-      payload = { output: outputItems }
-    } else if (lastJsonPayload) {
-      payload = lastJsonPayload
-    } else {
-      const details = buildResponsesStreamDebugDetails({
-        useSplitStreamPath,
-        outputItems,
-        completedResponse,
-        lastJsonPayload,
-        streamedFinalImageCount,
-      })
-      if (logEntry) {
-        logEntry.responseBody = sanitizeDebugValue(details)
-      }
-      throw createApiError(RESPONSES_INCOMPLETE_STREAM_ERROR, response.status, {
-        requestId,
-        details,
-      })
-    }
-
+    const payload = buildLargeResponsesCompletedPayload(
+      completedResponse,
+      outputItems,
+      lastJsonPayload,
+    )
     if (payload == null) {
       const details = buildResponsesStreamDebugDetails({
-        useSplitStreamPath,
         outputItems,
         completedResponse,
         lastJsonPayload,
@@ -442,33 +390,37 @@ export async function readImagesPayloadStream(
   let failedPayload: Record<string, unknown> | null = null
   let lastJsonPayload: Record<string, unknown> | null = null
 
-  const { text, sawAnyEvents } = await consumeSseResponseText(response, signal, async (event) => {
-    if (!event.json || !isRecord(event.json)) {
-      return
-    }
+  const { text, sawAnyEvents } = await consumeSseResponseText(
+    response,
+    signal,
+    async (event) => {
+      if (!event.json || !isRecord(event.json)) {
+        return
+      }
 
-    lastJsonPayload = event.json
+      lastJsonPayload = event.json
 
-    if (isImagesFailurePayload(event.json)) {
-      failedPayload = event.json
-    } else if (isCompletedImagesPayload(event.json)) {
-      completedItems.push(event.json)
-    } else if (event.json.type == null && hasDirectImagePayload(event.json)) {
-      standaloneImages.push(event.json)
-    }
+      if (isImagesFailurePayload(event.json)) {
+        failedPayload = event.json
+      } else if (isCompletedImagesPayload(event.json)) {
+        completedItems.push(event.json)
+      } else if (event.json.type == null && hasDirectImagePayload(event.json)) {
+        standaloneImages.push(event.json)
+      }
 
-    streamedFinalImageCount += await emitNewImagesFromPayload(
-      event.json,
-      fallbackMime,
-      signal,
-      emittedImageSignatures,
-      async (images) => {
-        for (const image of images) {
-          streamedImages.push(image)
-        }
-      },
-    )
-  })
+      streamedFinalImageCount += await emitNewImagesFromPayload(
+        event.json,
+        fallbackMime,
+        signal,
+        emittedImageSignatures,
+        async (images) => {
+          for (const image of images) {
+            streamedImages.push(image)
+          }
+        },
+      )
+    },
+  )
 
   if (sawAnyEvents) {
     if (failedPayload) {
@@ -526,4 +478,3 @@ export async function readImagesPayloadStream(
     actualTransport: sawAnyEvents ? 'stream' : 'json',
   }
 }
-

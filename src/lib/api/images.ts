@@ -10,14 +10,35 @@ import { parseImagesFromPayload } from './imagePayload'
 import { readImagesPayload } from './payloadText'
 import { createImagesPlanner, mergeTaskResponseTransportMeta } from './requestPlanner'
 import { buildImagesRequestSpec } from './imagesRequestBuilder'
-import { readImagesPayloadStream } from './helpers'
+import { readImagesPayloadStream } from './sseReader'
 import type {
   ApiImageAsset,
   ApiDebugRequestLogEntry,
+  ApiError,
   CallApiOptions,
   CallApiResult,
   SharedRequestContext,
 } from './types'
+
+function normalizeImagesEditCompatibilityError(error: unknown): unknown {
+  if (!(error instanceof Error)) {
+    return error
+  }
+
+  if (!/failed to parse multipart form|\/backend-api\/files failed|bad_response_body/i.test(error.message)) {
+    return error
+  }
+
+  const apiError = error as ApiError
+  return createApiError(
+    '当前供应商的 /v1/images/edits 兼容性不足，看起来只支持 /v1/images/generations，或其内部文件上传链路被拦截。请优先改用 Responses 协议做参考图编辑，或更换为明确支持 /images/edits 的供应商。',
+    apiError.status,
+    {
+      requestId: apiError.requestId,
+      details: apiError.details,
+    },
+  )
+}
 
 export async function callImagesApi(
   opts: CallApiOptions,
@@ -87,7 +108,7 @@ export async function callImagesApi(
       }
     } catch (error) {
       if (!planner.failAndAdvance(error)) {
-        throw error
+        throw isEdit ? normalizeImagesEditCompatibilityError(error) : error
       }
     }
   }

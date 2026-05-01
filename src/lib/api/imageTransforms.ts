@@ -38,12 +38,12 @@ export async function dataUrlToBlob(dataUrl: string, signal?: AbortSignal): Prom
 
 export function getDataUrlByteSize(dataUrl: string): number {
   const base64 = dataUrl.split(',')[1] || ''
-  const paddingLength = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0
-  return Math.max(0, Math.floor((base64.length * 3) / 4) - paddingLength)
+  return getBase64ByteLength(base64)
 }
 
-export function shouldUseSplitResponsesStreamPath(): boolean {
-  return true
+function getBase64ByteLength(base64: string): number {
+  const paddingLength = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0
+  return Math.max(0, Math.floor((base64.length * 3) / 4) - paddingLength)
 }
 
 export function getFileExtensionFromMime(mimeType: string): string {
@@ -84,7 +84,13 @@ export async function base64ToBlob(
   }
 
   try {
-    return await dataUrlToBlob(normalizeBase64Image(normalizedBase64, mimeType), signal)
+    const bytes = decodeBase64ToBytes(normalizedBase64, signal)
+    if (signal) {
+      throwIfSignalAborted(signal)
+    }
+    const stableBytes = new Uint8Array(bytes.byteLength)
+    stableBytes.set(bytes)
+    return new Blob([stableBytes], { type: mimeType })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw error
@@ -541,6 +547,26 @@ function normalizeBase64Payload(base64: string): string {
   return normalized
 }
 
+function decodeBase64ToBytes(base64: string, signal?: AbortSignal): Uint8Array {
+  const chunkSize = 0x8000
+  const bytes = new Uint8Array(getBase64ByteLength(base64))
+  let writeOffset = 0
+
+  for (let index = 0; index < base64.length; index += chunkSize) {
+    if (signal) {
+      throwIfSignalAborted(signal)
+    }
+
+    const binaryChunk = atob(base64.slice(index, index + chunkSize))
+    for (let chunkIndex = 0; chunkIndex < binaryChunk.length; chunkIndex += 1) {
+      bytes[writeOffset] = binaryChunk.charCodeAt(chunkIndex)
+      writeOffset += 1
+    }
+  }
+
+  return writeOffset === bytes.length ? bytes : bytes.slice(0, writeOffset)
+}
+
 async function fetchImageUrlAsBlob(
   url: string,
   signal: AbortSignal,
@@ -558,21 +584,48 @@ async function fetchImageUrlAsBlob(
 }
 
 async function blobToDataUrl(blob: Blob, fallbackMime: string, signal?: AbortSignal): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer())
-  let binary = ''
+  const blobToRead = blob.type ? blob : new Blob([blob], { type: fallbackMime })
 
-  for (let index = 0; index < bytes.length; index += 0x8000) {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    const cleanupAbort = (abortHandler?: () => void) => {
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler)
+      }
+    }
+
+    const abortHandler = signal
+      ? () => {
+          reader.abort()
+          reject(new DOMException('Aborted', 'AbortError'))
+        }
+      : undefined
+
     if (signal) {
       throwIfSignalAborted(signal)
+      signal.addEventListener('abort', abortHandler!, { once: true })
     }
-    const chunk = bytes.subarray(index, index + 0x8000)
-    binary += String.fromCharCode(...chunk)
-  }
 
-  if (signal) {
-    throwIfSignalAborted(signal)
-  }
-  return `data:${blob.type || fallbackMime};base64,${btoa(binary)}`
+    reader.onload = () => {
+      cleanupAbort(abortHandler)
+      if (typeof reader.result !== 'string') {
+        reject(new Error('Blob 转 data URL 失败：读取结果不是字符串'))
+        return
+      }
+      resolve(reader.result)
+    }
+    reader.onerror = () => {
+      cleanupAbort(abortHandler)
+      reject(reader.error ?? new Error('Blob 转 data URL 失败'))
+    }
+    reader.onabort = () => {
+      cleanupAbort(abortHandler)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+
+    reader.readAsDataURL(blobToRead)
+  })
 }
 
 async function loadImageElement(src: string): Promise<HTMLImageElement> {

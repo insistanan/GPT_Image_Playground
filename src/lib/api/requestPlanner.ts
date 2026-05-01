@@ -3,6 +3,7 @@ import { getResponsesTransportMode } from './config'
 import type {
   ActualTransportKind,
   ApiError,
+  CallApiOptions,
   ImagesRequestPlan,
   ResponsesActionMode,
   ResponsesInputImage,
@@ -12,20 +13,52 @@ import type {
   ResponsesTransportKind,
 } from './types'
 
+/**
+ * API 请求策略规划器。
+ *
+ * 职责：根据协议、传输模式、图片输入方式等条件，生成一组按优先级排序的
+ * RequestPlan 列表。调用方（responses.ts / images.ts）按顺序尝试每个 Plan，
+ * 失败时通过 failAndAdvance() 决定是否退避到下一个 Plan。
+ *
+ * 核心概念：
+ * - Plan 列表由 build*RequestPlans() 生成，按优先级排列
+ * - createPlannerSession() 封装 Plan 遍历、成功标记、失败推进
+ * - shouldRetry*() 函数决定"当前 Plan 失败后是否尝试下一个"
+ * - shouldBlockTransportFallback() 判断错误类型是否阻止降级
+ *
+ * 退避策略示例（Responses）：
+ *   1. official-stream-message-list    (首选：流式)
+ *   2. official-json-message-list       (降级：JSON)
+ *   3. explicit-action-stream           (兼容：显式 action)
+ *   4. forced-tool-stream-message-list  (兜底：强制工具调用)
+ *   ...
+ */
+
 interface PlannerSession<TPlan extends { transport: ResponsesTransportKind }> {
   currentPlan: TPlan
   completeSuccess: (actualTransport: ActualTransportKind) => AppliedTransportMeta
   failAndAdvance: (error: unknown) => TPlan | null
 }
 
+/**
+ * 判断错误是否为中止类错误（AbortError）。
+ * 中止错误不应触发重试或降级。
+ */
 function isAbortLikeError(error: unknown): error is Error {
   return error instanceof Error && (error.name === 'AbortError' || /\babort(?:ed)?\b/i.test(error.message))
 }
 
+/**
+ * 判断认证/配额类错误，此类错误不应触发传输降级。
+ */
 function isAuthLikeError(error: unknown): error is Error {
   return error instanceof Error && /(?:auth_not_found|no auth available|invalid api key|insufficient|quota)/i.test(error.message)
 }
 
+/**
+ * 判断是否应阻止传输降级。
+ * 中止、认证、配额类错误以及特定 HTTP 状态码不应触发降级重试。
+ */
 function shouldBlockTransportFallback(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return true
@@ -61,6 +94,9 @@ export function mergeTaskResponseTransportMeta(
   }
 }
 
+/**
+ * 获取首选传输序列（stream -> json 或仅 json）。
+ */
 function getPreferredTransportSequence(settings: AppSettings): ResponsesTransportKind[] {
   const mode = getResponsesTransportMode(settings)
   if (mode === 'json') {
@@ -70,6 +106,9 @@ function getPreferredTransportSequence(settings: AppSettings): ResponsesTranspor
   return ['stream', 'json']
 }
 
+/**
+ * Responses stream->json 降级判断：当前 plan 是 stream、下一个是 json 且未被阻止。
+ */
 function shouldFallbackResponsesStreamToJson(
   error: unknown,
   currentPlan: { transport: ResponsesTransportKind },
@@ -82,7 +121,11 @@ function shouldFallbackResponsesStreamToJson(
   return !shouldBlockTransportFallback(error)
 }
 
-function shouldRetryResponsesWithCompatibility(error: unknown): boolean {
+/**
+ * Responses 兼容性重试判断：错误是否表明可尝试不同参数组合。
+ * 例如 404/405 可能表示端点不支持当前参数，可尝试兼容模式。
+ */
+export function shouldRetryResponsesWithCompatibility(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false
   }
@@ -101,7 +144,10 @@ function shouldRetryResponsesWithCompatibility(error: unknown): boolean {
   )
 }
 
-function shouldRetryImagesPlan(
+/**
+ * Images 协议的重试判断：考虑传输降级（stream->json）和 body 格式降级（json->multipart）。
+ */
+export function shouldRetryImagesPlan(
   error: unknown,
   currentPlan: ImagesRequestPlan,
   nextPlan?: ImagesRequestPlan,
@@ -115,6 +161,10 @@ function shouldRetryImagesPlan(
   }
 
   if (shouldBlockTransportFallback(error)) {
+    return false
+  }
+
+  if (/\/backend-api\/files failed/i.test(error.message)) {
     return false
   }
 
@@ -143,7 +193,10 @@ function shouldRetryImagesPlan(
   )
 }
 
-function isResponsesRelayFailure(error: unknown): boolean {
+/**
+ * 判断是否为上游代理/中继故障，此类错误不应触发参数兼容性重试。
+ */
+export function isResponsesRelayFailure(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false
   }
@@ -158,7 +211,18 @@ function isResponsesRelayFailure(error: unknown): boolean {
   )
 }
 
-function buildResponsesRequestPlans(
+/**
+ * 构建 Responses 协议的 RequestPlan 列表。
+ *
+ * Plan 优先级（从高到低）：
+ *   1. official-{transport}-message-list  — 标准官方调用
+ *   2. explicit-action-{transport}         — 有参考图时显式 action
+ *   3. message-list-{transport}            — 强制 message-list 格式
+ *   4. forced-tool-{transport}-{mode}      — 强制 tool_choice 兜底
+ *
+ * 蒙版编辑场景下 transport 顺序反转（json -> stream），因为蒙版数据量较大。
+ */
+export function buildResponsesRequestPlans(
   opts: CallApiOptions,
   inputImages: ResponsesInputImage[],
 ): ResponsesRequestPlan[] {
@@ -237,10 +301,15 @@ function buildResponsesRequestPlans(
   return plans
 }
 
-function buildImagesRequestPlans(settings: AppSettings, options?: { isEdit?: boolean }): ImagesRequestPlan[] {
-  const transports = getPreferredTransportSequence(settings)
+/**
+ * 构建 Images 协议的 RequestPlan 列表。
+ * 编辑场景下生成 json+multipart 两组 plan，按 transport 顺序排列。
+ */
+export function buildImagesRequestPlans(settings: AppSettings, options?: { isEdit?: boolean }): ImagesRequestPlan[] {
+  const mode = getResponsesTransportMode(settings)
 
   if (!options?.isEdit) {
+    const transports = getPreferredTransportSequence(settings)
     return transports.map((transport) => ({
       id: transport,
       transport,
@@ -248,23 +317,43 @@ function buildImagesRequestPlans(settings: AppSettings, options?: { isEdit?: boo
     }))
   }
 
-  const plans: ImagesRequestPlan[] = []
-  for (const transport of transports) {
-    plans.push(
+  if (mode === 'json') {
+    return [
       {
-        id: `json-body-${transport}`,
-        transport,
+        id: 'json-body-json',
+        transport: 'json',
         bodyMode: 'json',
       },
       {
-        id: `multipart-body-${transport}`,
-        transport,
+        id: 'multipart-body-json',
+        transport: 'json',
         bodyMode: 'multipart',
       },
-    )
+    ]
   }
 
-  return plans
+  return [
+    {
+      id: 'json-body-json',
+      transport: 'json',
+      bodyMode: 'json',
+    },
+    {
+      id: 'multipart-body-json',
+      transport: 'json',
+      bodyMode: 'multipart',
+    },
+    {
+      id: 'json-body-stream',
+      transport: 'stream',
+      bodyMode: 'json',
+    },
+    {
+      id: 'multipart-body-stream',
+      transport: 'stream',
+      bodyMode: 'multipart',
+    },
+  ]
 }
 
 function createPlannerSession<TPlan extends { transport: ResponsesTransportKind }>(
