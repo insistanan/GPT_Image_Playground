@@ -74,15 +74,41 @@ export default function ImageContextMenu() {
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    const src = menuInfo.src
     setMenuInfo(null)
     try {
-      const res = await fetch(menuInfo.src)
+      const res = await fetch(src)
       const blob = await res.blob()
+      const ext = blob.type.split('/')[1] || 'png'
+      const fileName = `image-${Date.now()}.${ext}`
+
+      // 移动端优先走 Web Share API：<a download> 在 iOS Safari 上会被忽略，
+      // 无法存入相册，而系统分享面板可让用户直接“存储图像”。
+      // 仅在触摸设备（主指针为手指）启用，避免桌面端 Chrome（canShare files 亦为 true）
+      // 把“下载”变成弹出系统分享面板的回归。
+      const isTouchDevice =
+        typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+
+      if (isTouchDevice && typeof navigator.canShare === 'function') {
+        const file = new File([blob], fileName, { type: blob.type || 'image/png' })
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file] })
+            return
+          } catch (shareErr) {
+            // 用户取消分享时不视为错误，直接结束。
+            if (shareErr instanceof DOMException && shareErr.name === 'AbortError') {
+              return
+            }
+            // 其他情况回退到下载链接方案。
+          }
+        }
+      }
+
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const ext = blob.type.split('/')[1] || 'png'
-      a.download = `image-${Date.now()}.${ext}`
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

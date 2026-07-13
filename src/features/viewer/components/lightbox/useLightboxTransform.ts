@@ -384,7 +384,9 @@ export function useLightboxTransform(options: UseLightboxTransformOptions) {
       element.removeEventListener('touchmove', handleTouchMove)
       element.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [apply, getCenter, onClose])
+    // 依赖 src：首帧 src 未就绪时容器尚未挂载，effect 会 early-return；
+    // src 到位后组件才真正挂载 containerRef，需要借助 src 变化重新绑定触摸事件。
+  }, [apply, getCenter, onClose, src])
 
   const scale = scaleRef.current
   const tx = txRef.current
