@@ -9,6 +9,7 @@ import type { TaskApiOutputImageAsset } from './taskApiRequest'
 import { callTaskImageApi } from './taskApiRequest'
 import type { StoreApiError } from './contracts'
 import { isRecord } from '../lib/guards'
+import { isUserAbortLikeError } from '../lib/api/abort'
 import { evictImage, storeImage } from './imageAssets'
 import { useStore } from './state'
 import {
@@ -118,9 +119,9 @@ export async function executeTask(taskId: string, requestSettings: AppSettings) 
 
     useStore.getState().showToast(`生成完成，共 ${outputIds.length} 张图片`, 'success')
   } catch (error) {
-    const wasUserAborted =
-      isTaskAbortRequested(taskId) ||
-      (error instanceof Error && (error.name === 'TaskAbortError' || error.message === '任务已中止'))
+    // 用户中止的判定：标记位（检查点抛错）或类型化 AbortError。
+    // 超时 abort 带 timeout 标记，不算用户中止，走正常失败分支展示原因。
+    const wasUserAborted = isTaskAbortRequested(taskId) || isUserAbortLikeError(error)
     if (wasUserAborted) {
       abortTaskRun(taskId, outputIds)
       return

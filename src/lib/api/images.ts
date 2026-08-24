@@ -6,6 +6,7 @@ import {
   sanitizeDebugValue,
 } from './debug'
 import { createApiError, emitFinalImages } from './imageTransforms'
+import { abortAwareFetch } from './abort'
 import {
   buildTaskResponseMetaFromCalls,
   collectImageGenerationCallsFromPayload,
@@ -58,6 +59,7 @@ export async function callImagesApi(
 
     try {
       let actualTransport: 'json' | 'stream' = 'json'
+      ctx.refreshTimeout()
       const requestSpec = await buildImagesRequestSpec({ opts, plan, ctx })
       debugLogEntry = createDebugRequestLogEntry(
         ctx,
@@ -66,7 +68,7 @@ export async function callImagesApi(
         requestSpec.requestUrl,
         requestSpec.debugBody,
       )
-      const response = await fetch(requestSpec.requestUrl, requestSpec.requestInit)
+      const response = await abortAwareFetch(requestSpec.requestUrl, requestSpec.requestInit, ctx.controller.signal)
 
       if (!response.ok) {
         throw await buildApiErrorFromResponse(response, debugLogEntry)

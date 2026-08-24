@@ -1,4 +1,4 @@
-import { createAbortError, getAbortSignalMessage, throwIfSignalAborted } from './abort'
+import { createAbortErrorFromSignal, throwIfSignalAborted } from './abort'
 import type { ParsedSseEvent } from './types'
 
 export function tryParseJson(text: string): unknown | undefined {
@@ -102,13 +102,18 @@ function processIncrementalSseLine(
   return null
 }
 
+function stripLineTrailingCarriageReturn(line: string): string {
+  // SSE 行以 \n 分隔；\r\n 的 \r 可能因 chunk 边界被切开而残留在行尾，这里统一剥离。
+  return line.endsWith('\r') ? line.slice(0, -1) : line
+}
+
 function feedIncrementalSseParser(
   state: IncrementalSseParserState,
   chunk: string,
   flush = false,
   options?: IncrementalSseParserOptions,
 ): ParsedSseEvent[] {
-  state.buffer += chunk.replace(/\r\n/g, '\n')
+  state.buffer += chunk
   const events: ParsedSseEvent[] = []
 
   while (true) {
@@ -117,7 +122,7 @@ function feedIncrementalSseParser(
       break
     }
 
-    const line = state.buffer.slice(0, newlineIndex)
+    const line = stripLineTrailingCarriageReturn(state.buffer.slice(0, newlineIndex))
     state.buffer = state.buffer.slice(newlineIndex + 1)
     const nextEvent = processIncrementalSseLine(state, line, options)
     if (nextEvent) {
@@ -127,7 +132,7 @@ function feedIncrementalSseParser(
 
   if (flush) {
     if (state.buffer) {
-      const finalEvent = processIncrementalSseLine(state, state.buffer, options)
+      const finalEvent = processIncrementalSseLine(state, stripLineTrailingCarriageReturn(state.buffer), options)
       state.buffer = ''
       if (finalEvent) {
         events.push(finalEvent)
@@ -170,7 +175,7 @@ export async function consumeSseResponseText(
     return await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve, reject) => {
       const onAbort = () => {
         void reader.cancel().catch(() => undefined)
-        reject(createAbortError(getAbortSignalMessage(signal)))
+        reject(createAbortErrorFromSignal(signal))
       }
 
       signal.addEventListener('abort', onAbort, { once: true })

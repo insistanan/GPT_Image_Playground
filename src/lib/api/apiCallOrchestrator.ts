@@ -1,4 +1,5 @@
 import { normalizeProxyTargetBaseUrl, readClientDevProxyConfig } from '../devProxy'
+import type { AppSettings } from '../../types'
 import { getApiProtocol, MIME_MAP } from './config'
 import { attachLocalDebugToError } from './debug'
 import { callImagesApi } from './images'
@@ -12,11 +13,25 @@ import type {
   SharedRequestContext,
 } from './types'
 
+interface ApiCallTimeoutState {
+  id: ReturnType<typeof setTimeout>
+}
+
 interface ApiCallRuntime {
   baseOpts: CallApiOptions
   normalizedOpts: CallApiOptions
   ctx: SharedRequestContext
-  timeoutId: ReturnType<typeof setTimeout>
+  timeoutState: ApiCallTimeoutState
+}
+
+function resolveTimeoutMs(settings: AppSettings): number {
+  const timeoutMs = settings.timeout * 1000
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw createApiError(
+      `请求超时时间无效（当前为 ${settings.timeout} 秒），请在设置中配置为正数`,
+    )
+  }
+  return timeoutMs
 }
 
 function resolveEditSourceImageIndex(intent: CallImageApiIntent): number | undefined {
@@ -60,15 +75,24 @@ function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
     Authorization: `Bearer ${baseOpts.settings.apiKey}`,
   }
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort('timeout'), baseOpts.settings.timeout * 1000)
+  const timeoutMs = resolveTimeoutMs(baseOpts.settings)
+  // 超时计时器覆盖单个 RequestPlan 的完整生命周期（含响应读取），
+  // 每次降级重试前通过 ctx.refreshTimeout() 重置，避免前面的重试吃掉后续 plan 的全部时间。
+  const timeoutState: ApiCallTimeoutState = {
+    id: setTimeout(() => controller.abort('timeout'), timeoutMs),
+  }
   baseOpts.registerAbort?.(() => controller.abort('user'))
 
   return {
     baseOpts,
     normalizedOpts: baseOpts,
-    timeoutId,
+    timeoutState,
     ctx: {
       controller,
+      refreshTimeout: () => {
+        clearTimeout(timeoutState.id)
+        timeoutState.id = setTimeout(() => controller.abort('timeout'), timeoutMs)
+      },
       requestHeaders,
       proxyConfig,
       mime,
@@ -128,6 +152,6 @@ export async function callImageApi(intent: CallImageApiIntent): Promise<CallApiR
   } catch (error) {
     throw attachLocalDebugToError(error, runtime.normalizedOpts, runtime.ctx.debugLog)
   } finally {
-    clearTimeout(runtime.timeoutId)
+    clearTimeout(runtime.timeoutState.id)
   }
 }

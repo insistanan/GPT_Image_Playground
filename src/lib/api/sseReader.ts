@@ -96,8 +96,20 @@ function extractSseImageStringField(dataText: string, fieldName: string): string
   return undefined
 }
 
+// 字段名来自固定调用点，缓存正则避免每个 SSE 事件都重新编译。
+const sseImageNumberFieldPatterns = new Map<string, RegExp>()
+
+function getSseImageNumberFieldPattern(fieldName: string): RegExp {
+  let pattern = sseImageNumberFieldPatterns.get(fieldName)
+  if (!pattern) {
+    pattern = new RegExp(`"${fieldName}"\\s*:\\s*(-?\\d+)`)
+    sseImageNumberFieldPatterns.set(fieldName, pattern)
+  }
+  return pattern
+}
+
 function extractSseImageNumberField(dataText: string, fieldName: string): number | undefined {
-  const match = dataText.match(new RegExp(`"${fieldName}"\\s*:\\s*(-?\\d+)`))
+  const match = dataText.match(getSseImageNumberFieldPattern(fieldName))
   if (!match) {
     return undefined
   }

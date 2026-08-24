@@ -1,4 +1,5 @@
 import type { ResponsesImageInputMode } from '../../types'
+import { abortAwareFetch } from './abort'
 import { buildRequestUrl } from './config'
 import {
   buildApiErrorFromResponse,
@@ -106,13 +107,13 @@ async function uploadInputImageAsFileId(
     sizeBytes: blob.size,
   })
 
-  const response = await fetch(requestUrl, {
+  const response = await abortAwareFetch(requestUrl, {
     method: 'POST',
     headers: ctx.requestHeaders,
     cache: 'no-store',
     body: formData,
     signal: ctx.controller.signal,
-  })
+  }, ctx.controller.signal)
 
   if (!response.ok) {
     throw await buildApiErrorFromResponse(response, debugLogEntry)

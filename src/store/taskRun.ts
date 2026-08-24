@@ -85,7 +85,11 @@ export async function retryTaskRun(task: TaskRecord): Promise<RetryTaskRunResult
 }
 
 export function requestAbortTaskRun(task: TaskRecord): RequestAbortTaskRunResult {
-  const abortPlan = resolveTaskAbortPlan(task)
+  // 不信任调用方传入的任务快照：中止判定必须基于 store 实时状态。
+  // 检查与标记写入都在同一同步块内完成，避免与任务正常结束的清理逻辑产生竞态，
+  // 否则可能残留 userAbortedTaskIds 标记，导致该任务后续重试永远立即失败。
+  const liveTask = useStore.getState().tasks.find((item) => item.id === task.id) ?? task
+  const abortPlan = resolveTaskAbortPlan(liveTask)
 
   if (abortPlan.action === 'blocked') {
     return {
@@ -95,8 +99,8 @@ export function requestAbortTaskRun(task: TaskRecord): RequestAbortTaskRunResult
     }
   }
 
-  requestTaskAbort(task.id)
-  getTaskAborter(task.id)?.()
+  requestTaskAbort(liveTask.id)
+  getTaskAborter(liveTask.id)?.()
 
   return {
     ok: true,

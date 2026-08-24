@@ -1,5 +1,7 @@
 import type { AppliedTransportMeta } from '../../types'
 
+import { abortAwareFetch } from './abort'
+
 import {
 
   buildRequestUrl,
@@ -119,6 +121,8 @@ export async function callResponsesApi(
 
           let actualTransport: ActualTransportKind = 'json'
 
+          ctx.refreshTimeout()
+
           const requestUrl = buildRequestUrl(opts.settings.baseUrl, 'responses', ctx)
 
           const requestBody = buildResponsesRequestBody({
@@ -147,7 +151,7 @@ export async function callResponsesApi(
 
           )
 
-          const response = await fetch(requestUrl, {
+          const response = await abortAwareFetch(requestUrl, {
 
             method: 'POST',
 

@@ -1,6 +1,6 @@
 import type { ImageEditSelection } from '../../types'
 import { MIME_MAP } from './config'
-import { throwIfSignalAborted } from './abort'
+import { throwIfSignalAborted, abortAwareFetch } from './abort'
 import { getImageExtensionFromMimeType } from '../imageMime'
 import { isRemoteImageUrl } from '../imageUrl'
 import type {
@@ -32,7 +32,7 @@ export function isDataUrl(value: string): boolean {
 }
 
 export async function dataUrlToBlob(dataUrl: string, signal?: AbortSignal): Promise<Blob> {
-  const response = await fetch(dataUrl, { signal })
+  const response = await abortAwareFetch(dataUrl, { signal }, signal)
   return response.blob()
 }
 
@@ -61,11 +61,11 @@ export async function emitFinalImages(
   try {
     await opts.onFinalImages(images)
   } catch (error) {
+    // 中止类错误必须继续向上抛（用户中止与超时都算），
+    // 其余回调失败仅告警并回退到最终结果同步。
     if (
       error instanceof Error &&
-      (error.name === 'AbortError' ||
-        error.name === 'TaskAbortError' ||
-        error.message === '任务已中止')
+      (error.name === 'TaskAbortError' || error.name === 'AbortError')
     ) {
       throw error
     }
@@ -571,10 +571,10 @@ async function fetchImageUrlAsBlob(
   url: string,
   signal: AbortSignal,
 ): Promise<Blob> {
-  const response = await fetch(url, {
+  const response = await abortAwareFetch(url, {
     cache: 'no-store',
     signal,
-  })
+  }, signal)
 
   if (!response.ok) {
     throw new Error(`图片 URL 下载失败：HTTP ${response.status}`)

@@ -25,6 +25,10 @@ const RESPONSE_OUTPUT_ITEM_STRING_FIELDS = [
   'background',
   'action',
   'revised_prompt',
+  // result / b64_json 必须保留：outputItems 会作为回退 payload 进入下游解析，
+  // imagePayload 解码图片依赖这两个字段读取 base64 数据。
+  'b64_json',
+  'result',
   'url',
   'image_url',
 ] as const

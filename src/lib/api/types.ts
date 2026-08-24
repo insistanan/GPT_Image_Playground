@@ -71,6 +71,11 @@ export type ActualTransportKind = NonNullable<AppliedTransportMeta['actual']>
 
 export interface SharedRequestContext {
   controller: AbortController
+  /**
+   * 重置请求超时计时器。每个 RequestPlan 开始时调用，
+   * 避免前面降级重试消耗掉后续 plan 的全部可用时间。
+   */
+  refreshTimeout: () => void
   requestHeaders: Record<string, string>
   proxyConfig: ReturnType<typeof readClientDevProxyConfig>
   mime: string
