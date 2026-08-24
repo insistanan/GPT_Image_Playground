@@ -37,6 +37,11 @@ export function throwIfSignalAborted(signal: AbortSignal, message?: string): voi
   }
 }
 
+export function isTimeoutAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError' &&
+    (error as AbortErrorWithKind).abortKind === 'timeout'
+}
+
 export function isUserAbortLikeError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false
@@ -65,11 +70,7 @@ export async function abortAwareFetch(
   try {
     return await fetch(url, { ...init, signal })
   } catch (error) {
-    // fetch 中止时抛出的是 DOMException；部分运行环境中它不满足 instanceof Error，需单独判断。
-    const isAbortError =
-      (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
-      (error instanceof Error && error.name === 'AbortError')
-    if (isAbortError) {
+    if (error instanceof Error && error.name === 'AbortError') {
       // signal 缺失时理论上不会抛 AbortError；真发生了则保留原始错误，避免丢失信息。
       throw signal ? createAbortErrorFromSignal(signal) : error
     }
