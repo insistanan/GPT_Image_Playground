@@ -1,4 +1,4 @@
-import { normalizeProxyTargetBaseUrl, readClientDevProxyConfig } from '../devProxy'
+import { DEV_PROXY_TARGET_HEADER, normalizeProxyTargetBaseUrl, readClientDevProxyConfig } from '../devProxy'
 import type { AppSettings } from '../../types'
 import { getApiProtocol, MIME_MAP } from './config'
 import { attachLocalDebugToError } from './debug'
@@ -117,7 +117,7 @@ async function prepareApiCallRuntime(runtime: ApiCallRuntime): Promise<void> {
       throw createApiError('API URL 无效，请检查设置中的 API URL')
     }
 
-    ctx.requestHeaders['X-Dev-Proxy-Target'] = proxyTargetBaseUrl
+    ctx.requestHeaders[DEV_PROXY_TARGET_HEADER] = proxyTargetBaseUrl
   }
 
   if (baseOpts.editMaskDataUrl == null) {

@@ -9,12 +9,12 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import {
   DEV_PROXY_REQUEST_ID_HEADER,
+  DEV_PROXY_TARGET_HEADER,
   normalizeDevProxyConfig,
   normalizeProxyTargetBaseUrl,
 } from './src/lib/devProxy'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
-const DEV_PROXY_TARGET_HEADER = 'x-dev-proxy-target'
 const RESPONSE_HEADERS_TO_SKIP = new Set([
   'connection',
   'content-encoding',

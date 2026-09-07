@@ -1,5 +1,6 @@
 import type { AppliedTransportMeta, AppSettings, TaskResponseMeta } from '../../types'
 import { getResponsesTransportMode } from './config'
+import { isImageUrlDownloadError } from './imageDownload'
 import type {
   ActualTransportKind,
   ApiError,
@@ -57,9 +58,14 @@ function isAuthLikeError(error: unknown): error is Error {
 
 /**
  * 判断是否应阻止传输降级。
- * 中止、认证、配额类错误以及特定 HTTP 状态码不应触发降级重试。
+ * 中止、认证、配额类错误、特定 HTTP 状态码以及图片下载失败不应触发降级重试。
+ * 图片下载失败意味着生成本身已成功计费，任何形式的重新请求都会重复扣费。
  */
 function shouldBlockTransportFallback(error: unknown): boolean {
+  if (isImageUrlDownloadError(error)) {
+    return true
+  }
+
   if (!(error instanceof Error)) {
     return true
   }
@@ -130,6 +136,10 @@ export function shouldRetryResponsesWithCompatibility(error: unknown): boolean {
     return false
   }
 
+  if (isImageUrlDownloadError(error)) {
+    return false
+  }
+
   if (isResponsesRelayFailure(error)) {
     return false
   }
@@ -153,6 +163,10 @@ export function shouldRetryImagesPlan(
   nextPlan?: ImagesRequestPlan,
 ): boolean {
   if (!nextPlan || !(error instanceof Error)) {
+    return false
+  }
+
+  if (isImageUrlDownloadError(error)) {
     return false
   }
 

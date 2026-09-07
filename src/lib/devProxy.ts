@@ -7,6 +7,7 @@ export interface DevProxyConfig {
 }
 
 export const DEV_PROXY_REQUEST_ID_HEADER = 'x-dev-proxy-request-id'
+export const DEV_PROXY_TARGET_HEADER = 'x-dev-proxy-target'
 
 function trimTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, '')

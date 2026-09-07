@@ -3,6 +3,7 @@ import { MIME_MAP } from './config'
 import { throwIfSignalAborted, abortAwareFetch } from './abort'
 import { getImageExtensionFromMimeType } from '../imageMime'
 import { isRemoteImageUrl } from '../imageUrl'
+import { fetchRemoteImageBlob } from './imageDownload'
 import type {
   ApiImageAsset,
   ApiError,
@@ -571,16 +572,7 @@ async function fetchImageUrlAsBlob(
   url: string,
   signal: AbortSignal,
 ): Promise<Blob> {
-  const response = await abortAwareFetch(url, {
-    cache: 'no-store',
-    signal,
-  }, signal)
-
-  if (!response.ok) {
-    throw new Error(`图片 URL 下载失败：HTTP ${response.status}`)
-  }
-
-  return await response.blob()
+  return await fetchRemoteImageBlob(url, signal)
 }
 
 async function blobToDataUrl(blob: Blob, fallbackMime: string, signal?: AbortSignal): Promise<string> {
