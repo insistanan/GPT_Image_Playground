@@ -1,13 +1,10 @@
 import type { TaskErrorDebugInfo } from '../../types'
 import { DEV_PROXY_REQUEST_ID_HEADER } from '../devProxy'
 import { isRecord } from '../guards'
+import { isSensitiveFieldName, sanitizeLogValue, summarizeLogString } from '../logSanitize'
 import { getApiProtocol } from './config'
 import { extractErrorMessage } from './errors'
 import { createApiError, getDataUrlByteSize, isDataUrl, isHttpUrl } from './imageTransforms'
-import {
-  collectDebugImagePayloadFields,
-  hasUsableImagePayload,
-} from './payloadFacts'
 import { tryParseJson } from './sse'
 import type {
   ApiDebugRequestLogEntry,
@@ -17,9 +14,9 @@ import type {
   SharedRequestContext,
 } from './types'
 
-const DEBUG_STRING_PREVIEW_LIMIT = 1200
-const DEBUG_ARRAY_ITEM_LIMIT = 10
-const DEBUG_OBJECT_KEY_LIMIT = 30
+// 前端调试日志与 dev proxy 日志共用同一套摘要/脱敏实现，避免重复维护。
+export const summarizeDebugString = summarizeLogString
+export const sanitizeDebugValue = sanitizeLogValue
 
 export function readDevProxyRequestId(headers: Headers): string | undefined {
   const requestId = headers.get(DEV_PROXY_REQUEST_ID_HEADER)?.trim()
@@ -29,87 +26,6 @@ export function readDevProxyRequestId(headers: Headers): string | undefined {
 export function isSseResponse(response: Response): boolean {
   const contentType = response.headers.get('content-type')?.toLowerCase() || ''
   return contentType.includes('text/event-stream')
-}
-
-export function summarizeDebugString(value: string): string {
-  if (/^Bearer\s+/i.test(value)) {
-    return '[REDACTED_BEARER_TOKEN]'
-  }
-
-  if (value.startsWith('data:')) {
-    const mime = /^data:([^;,]+)[^,]*,/.exec(value)?.[1] || 'unknown'
-    return `[data-url mime=${mime} length=${value.length}]`
-  }
-
-  if (/^[A-Za-z0-9+/=]{600,}$/.test(value)) {
-    return `[base64 length=${value.length}]`
-  }
-
-  if (value.length > DEBUG_STRING_PREVIEW_LIMIT) {
-    return `${value.slice(0, DEBUG_STRING_PREVIEW_LIMIT)}...[truncated ${value.length - DEBUG_STRING_PREVIEW_LIMIT} chars]`
-  }
-
-  return value
-}
-
-export function sanitizeDebugValue(value: unknown, depth = 0, visited?: WeakSet<object>): unknown {
-  if (value == null || typeof value === 'boolean' || typeof value === 'number') {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    return summarizeDebugString(value)
-  }
-
-  if (depth >= 5) {
-    return '[max-depth-reached]'
-  }
-
-  const nextVisited = visited ?? new WeakSet<object>()
-  if (typeof value === 'object' && value !== null) {
-    if (nextVisited.has(value)) {
-      return '[circular]'
-    }
-    nextVisited.add(value)
-  }
-
-  if (isRecord(value) && hasUsableImagePayload(value)) {
-    const compact = collectDebugImagePayloadFields(value)
-    for (const [key, fieldValue] of Object.entries(compact)) {
-      compact[key] = summarizeDebugString(fieldValue)
-    }
-
-    return compact
-  }
-
-  if (Array.isArray(value)) {
-    const items = value
-      .slice(0, DEBUG_ARRAY_ITEM_LIMIT)
-      .map((item) => sanitizeDebugValue(item, depth + 1, nextVisited))
-
-    if (value.length > DEBUG_ARRAY_ITEM_LIMIT) {
-      items.push(`[+${value.length - DEBUG_ARRAY_ITEM_LIMIT} more items]`)
-    }
-
-    return items
-  }
-
-  if (isRecord(value)) {
-    const entries = Object.entries(value)
-    const nextValue = Object.fromEntries(
-      entries
-        .slice(0, DEBUG_OBJECT_KEY_LIMIT)
-        .map(([key, nestedValue]) => [key, sanitizeDebugValue(nestedValue, depth + 1, nextVisited)] as const),
-    )
-
-    if (entries.length > DEBUG_OBJECT_KEY_LIMIT) {
-      nextValue.__truncatedKeys = entries.length - DEBUG_OBJECT_KEY_LIMIT
-    }
-
-    return nextValue
-  }
-
-  return String(value)
 }
 
 export function createDebugRequestLogEntry(
@@ -242,9 +158,7 @@ function summarizeRequestHeadersForDebug(headers: Record<string, string>): Recor
   return Object.fromEntries(
     Object.entries(headers).map(([key, value]) => [
       key,
-      /authorization|api[-_]?key|token|secret|password/i.test(key)
-        ? '[REDACTED]'
-        : summarizeDebugString(value),
+      isSensitiveFieldName(key) ? '[REDACTED]' : summarizeDebugString(value),
     ]),
   )
 }
