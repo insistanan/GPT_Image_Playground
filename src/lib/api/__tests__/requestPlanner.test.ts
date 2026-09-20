@@ -1,11 +1,17 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import {
   buildImagesRequestPlans,
   buildResponsesRequestPlans,
+  createImagesPlanner,
   isResponsesRelayFailure,
   shouldRetryImagesPlan,
   shouldRetryResponsesWithCompatibility,
 } from "../requestPlanner"
+import { resetStreamSupportCache } from "../streamSupport"
+
+beforeEach(() => {
+  resetStreamSupportCache()
+})
 
 function fakeSettings(overrides: Record<string, unknown> = {}) {
   return {
@@ -102,5 +108,29 @@ describe("buildResponsesRequestPlans", () => {
     const plans = buildResponsesRequestPlans(fakeCallApiOptions(), [] as any)
     expect(plans.length).toBeGreaterThan(0)
     expect(plans[0].id).toContain("official")
+  })
+})
+
+describe("stream capability memory", () => {
+  it("records unsupported stream after upstream rejection and skips probing later", () => {
+    const settings = fakeSettings()
+
+    const planner = createImagesPlanner(settings, { isEdit: false })
+    expect(planner.currentPlan.transport).toBe("stream")
+
+    const nextPlan = planner.failAndAdvance(
+      new Error("field Stream invalid, only false is allowed for this model"),
+    )
+    expect(nextPlan?.transport).toBe("json")
+
+    // 同一目标后续请求不再生成 stream plan，省掉一次必然失败的探测。
+    const plans = buildImagesRequestPlans(settings, { isEdit: false })
+    expect(plans).toHaveLength(1)
+    expect(plans[0].transport).toBe("json")
+  })
+
+  it("keeps stream plans when no capability failure was recorded", () => {
+    const plans = buildImagesRequestPlans(fakeSettings(), { isEdit: false })
+    expect(plans.map((plan) => plan.transport)).toEqual(["stream", "json"])
   })
 })

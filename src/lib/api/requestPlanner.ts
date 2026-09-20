@@ -1,6 +1,12 @@
-import type { AppliedTransportMeta, AppSettings, TaskResponseMeta } from '../../types'
+import type { ApiProtocol, AppliedTransportMeta, AppSettings, TaskResponseMeta } from '../../types'
 import { getResponsesTransportMode } from './config'
 import { isImageUrlDownloadError } from './imageDownload'
+import {
+  buildStreamSupportKey,
+  isStreamKnownUnsupported,
+  isStreamUnsupportedError,
+  markStreamUnsupported,
+} from './streamSupport'
 import type {
   ActualTransportKind,
   ApiError,
@@ -102,10 +108,21 @@ export function mergeTaskResponseTransportMeta(
 
 /**
  * 获取首选传输序列（stream -> json 或仅 json）。
+ *
+ * `protocol` 用于区分能力缓存：同一个 baseUrl 下，Responses 流式能力取决于
+ * 文本/图像模型，Images 流式能力取决于图像模型，两者不一定一致。
  */
-function getPreferredTransportSequence(settings: AppSettings): ResponsesTransportKind[] {
+function getPreferredTransportSequence(
+  settings: AppSettings,
+  protocol: ApiProtocol = 'images',
+): ResponsesTransportKind[] {
   const mode = getResponsesTransportMode(settings)
   if (mode === 'json') {
+    return ['json']
+  }
+
+  // 上游已明确表示该模型不支持流式，本会话内不再重复探测，避免每次任务都白跑一次 400。
+  if (isStreamKnownUnsupported(buildStreamSupportKey(settings, protocol))) {
     return ['json']
   }
 
@@ -243,9 +260,12 @@ export function buildResponsesRequestPlans(
   const hasReferenceImages = inputImages.length > 0
   const hasEditMask = Boolean(opts.editMaskDataUrl)
   const defaultInputPayloadMode: ResponsesInputPayloadMode = 'message-list'
-  const transports = getPreferredTransportSequence(opts.settings)
+  const transports = getPreferredTransportSequence(opts.settings, 'responses')
+  const streamKnownUnsupported = isStreamKnownUnsupported(
+    buildStreamSupportKey(opts.settings, 'responses'),
+  )
   const primaryTransports: ResponsesTransportKind[] =
-    hasEditMask && getResponsesTransportMode(opts.settings) === 'auto'
+    hasEditMask && getResponsesTransportMode(opts.settings) === 'auto' && !streamKnownUnsupported
       ? ['json', 'stream']
       : transports
   const allowJsonCompatibilityFallback = getResponsesTransportMode(opts.settings) === 'auto'
@@ -319,11 +339,17 @@ export function buildResponsesRequestPlans(
  * 构建 Images 协议的 RequestPlan 列表。
  * 编辑场景下生成 json+multipart 两组 plan，按 transport 顺序排列。
  */
-export function buildImagesRequestPlans(settings: AppSettings, options?: { isEdit?: boolean }): ImagesRequestPlan[] {
+export function buildImagesRequestPlans(
+  settings: AppSettings,
+  options?: { isEdit?: boolean },
+  protocol: ApiProtocol = 'images',
+): ImagesRequestPlan[] {
   const mode = getResponsesTransportMode(settings)
+  const streamUnsupported =
+    mode !== 'json' && isStreamKnownUnsupported(buildStreamSupportKey(settings, protocol))
 
   if (!options?.isEdit) {
-    const transports = getPreferredTransportSequence(settings)
+    const transports = getPreferredTransportSequence(settings, protocol)
     return transports.map((transport) => ({
       id: transport,
       transport,
@@ -331,22 +357,7 @@ export function buildImagesRequestPlans(settings: AppSettings, options?: { isEdi
     }))
   }
 
-  if (mode === 'json') {
-    return [
-      {
-        id: 'json-body-json',
-        transport: 'json',
-        bodyMode: 'json',
-      },
-      {
-        id: 'multipart-body-json',
-        transport: 'json',
-        bodyMode: 'multipart',
-      },
-    ]
-  }
-
-  return [
+  const jsonPlans: ImagesRequestPlan[] = [
     {
       id: 'json-body-json',
       transport: 'json',
@@ -357,6 +368,14 @@ export function buildImagesRequestPlans(settings: AppSettings, options?: { isEdi
       transport: 'json',
       bodyMode: 'multipart',
     },
+  ]
+
+  if (mode === 'json' || streamUnsupported) {
+    return jsonPlans
+  }
+
+  return [
+    ...jsonPlans,
     {
       id: 'json-body-stream',
       transport: 'stream',
@@ -402,17 +421,36 @@ function createPlannerSession<TPlan extends { transport: ResponsesTransportKind 
   }
 }
 
+/**
+ * 当上游因“该模型不支持流式”拒绝时，记录该目标，后续请求不再重复探测。
+ */
+function markStreamUnsupportedIfCapabilityError(
+  error: unknown,
+  currentPlan: { transport: ResponsesTransportKind },
+  streamSupportKey: string,
+): void {
+  if (currentPlan.transport === 'stream' && isStreamUnsupportedError(error)) {
+    markStreamUnsupported(streamSupportKey)
+  }
+}
+
 export function createResponsesPlanner(
   opts: CallApiOptions,
   inputImages: ResponsesInputImage[],
 ): PlannerSession<ResponsesRequestPlan> {
   const requested = getResponsesTransportMode(opts.settings)
+  const streamSupportKey = buildStreamSupportKey(opts.settings, 'responses')
+
   return createPlannerSession(
     requested,
     buildResponsesRequestPlans(opts, inputImages),
-    (error, currentPlan, nextPlan) =>
-      shouldRetryResponsesWithCompatibility(error) ||
-      shouldFallbackResponsesStreamToJson(error, currentPlan, nextPlan),
+    (error, currentPlan, nextPlan) => {
+      markStreamUnsupportedIfCapabilityError(error, currentPlan, streamSupportKey)
+      return (
+        shouldRetryResponsesWithCompatibility(error) ||
+        shouldFallbackResponsesStreamToJson(error, currentPlan, nextPlan)
+      )
+    },
   )
 }
 
@@ -421,5 +459,14 @@ export function createImagesPlanner(
   options?: { isEdit?: boolean },
 ): PlannerSession<ImagesRequestPlan> {
   const requested = getResponsesTransportMode(settings)
-  return createPlannerSession(requested, buildImagesRequestPlans(settings, options), shouldRetryImagesPlan)
+  const streamSupportKey = buildStreamSupportKey(settings, 'images')
+
+  return createPlannerSession(
+    requested,
+    buildImagesRequestPlans(settings, options),
+    (error, currentPlan, nextPlan) => {
+      markStreamUnsupportedIfCapabilityError(error, currentPlan, streamSupportKey)
+      return shouldRetryImagesPlan(error, currentPlan, nextPlan)
+    },
+  )
 }
