@@ -61,6 +61,7 @@ function buildCallApiOptions(intent: CallImageApiIntent): CallApiOptions {
     editSelection: intent.editMask?.selection ?? null,
     editSourceImageIndex: resolveEditSourceImageIndex(intent),
     onFinalImages: intent.onFinalImages,
+    onPartialImage: intent.onPartialImage,
     registerAbort: intent.registerAbort,
   }
 }

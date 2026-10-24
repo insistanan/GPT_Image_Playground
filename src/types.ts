@@ -144,8 +144,8 @@ const DEFAULT_REQUEST_MODE: RequestMode = import.meta.env.DEV ? 'local_proxy' : 
 export const DEFAULT_SETTINGS: AppSettings = {
   baseUrl: DEFAULT_BASE_URL,
   apiKey: '',
-  model: 'gpt-image-2',
-  responsesImageModel: 'gpt-image-2',
+  model: 'gpt-image-2.5-sunburst',
+  responsesImageModel: 'gpt-image-2.5-sunburst',
   responsesTransport: 'auto',
   responsesImageInputMode: 'auto',
   responsesPromptRevisionMode: 'allow',
@@ -156,13 +156,19 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 // ===== 任务参数 =====
 
+export type TaskQuality = 'auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+export type TaskBackground = 'auto' | 'opaque' | 'transparent'
+export type TaskInputFidelity = 'high' | 'low'
+
 export interface TaskParams {
   size: string
-  quality: 'auto' | 'low' | 'medium' | 'high'
+  quality: TaskQuality
   output_format: 'png' | 'jpeg' | 'webp'
   output_compression: number | null
   moderation: 'auto' | 'low'
   n: number
+  background: TaskBackground
+  input_fidelity?: TaskInputFidelity | null
 }
 
 export interface AppliedImageParams {

@@ -1,4 +1,4 @@
-import type { ActualTransportKind, ApiDebugRequestLogEntry, ApiImageAsset } from "./types"
+import type { ActualTransportKind, ApiDebugRequestLogEntry, ApiImageAsset, CallApiOptions } from "./types"
 import { readResponsesPayloadStream } from "./sseReader"
 import { readResponsesPayload } from "./payloadText"
 import {
@@ -38,11 +38,12 @@ export async function normalizeResponsesResponse(
   signal: AbortSignal,
   shouldReadAsStream: boolean,
   debugLogEntry?: ApiDebugRequestLogEntry,
+  onPartialImage?: CallApiOptions['onPartialImage'],
 ): Promise<NormalizedResponsesResult> {
   let actualTransport: ActualTransportKind = "json"
 
   const streamResult = shouldReadAsStream
-    ? await readResponsesPayloadStream(response, mime, signal, debugLogEntry)
+    ? await readResponsesPayloadStream(response, mime, signal, debugLogEntry, onPartialImage)
     : null
 
   const payload = streamResult?.payload ?? (await readResponsesPayload(response, debugLogEntry))

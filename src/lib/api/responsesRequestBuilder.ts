@@ -1,4 +1,5 @@
 import { buildResponsesPrompt, getResponsesImageModel } from './config'
+import { appendSharedImageParams } from './sharedImageParams'
 import type {
   CallApiOptions,
   ResponsesInputContent,
@@ -75,6 +76,10 @@ export function buildResponsesRequestBody({
   if (params.output_format !== 'png' && params.output_compression != null) {
     tool.output_compression = params.output_compression
   }
+  appendSharedImageParams(tool, params, {
+    isEdit: hasReferenceImages,
+    stream: plan.transport === 'stream',
+  })
   if (editMask) {
     tool.input_image_mask = editMask
   }

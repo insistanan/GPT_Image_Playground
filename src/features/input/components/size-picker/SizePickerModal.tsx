@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { calculateImageSize, normalizeImageSize, parseRatio, type SizeTier } from '../../../../lib/size'
+import { calculateImageSize, isExperimentalImageSize, normalizeImageSize, parseRatio, type SizeTier } from '../../../../lib/size'
 import SizePickerAutoPanel from './SizePickerAutoPanel'
 import SizePickerRatioPanel from './SizePickerRatioPanel'
 import SizePickerResolutionPanel from './SizePickerResolutionPanel'
@@ -116,6 +116,9 @@ export default function SizePickerModal({
             <div className="mt-1 font-mono text-lg font-semibold text-gray-800 dark:text-gray-100">
               {previewSize || (customRatioValid ? '尺寸无效' : '比例无效')}
             </div>
+            {previewSize && previewSize !== 'auto' && isExperimentalImageSize(previewSize) ? (
+              <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">实验分辨率（超过 2560×1440）</div>
+            ) : null}
           </div>
         </div>
 

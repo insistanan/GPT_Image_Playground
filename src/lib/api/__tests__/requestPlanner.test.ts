@@ -32,7 +32,7 @@ function fakeSettings(overrides: Record<string, unknown> = {}) {
 function fakeCallApiOptions(overrides: Record<string, unknown> = {}) {
   return {
     settings: fakeSettings(overrides),
-    params: { n: 1, size: "1024x1024", quality: "high", output_format: "png", output_compression: null, moderation: "auto" },
+    params: { n: 1, size: "1024x1024", quality: "high", output_format: "png", output_compression: null, moderation: "auto", background: "auto", input_fidelity: null },
     prompt: "test prompt",
     editMaskDataUrl: null,
   } as any

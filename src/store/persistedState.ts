@@ -1,5 +1,7 @@
+import { normalizeParamsForSettings } from '../lib/capabilities'
 import type { AppView, GalleryDisplayMode } from '../types'
 import type { AppState, PersistedAppStateSnapshot } from './contracts'
+import { DEFAULT_PARAMS } from './taskParams'
 import {
   createInitialProviderState,
   getProviderSettings,
@@ -75,10 +77,16 @@ export function mergePersistedAppState(
       persistedState?.activeCategoryFilter,
       normalizedCategories,
     ),
-    params: {
+    params: normalizeParamsForSettings({
+      ...DEFAULT_PARAMS,
       ...currentState.params,
       ...persistedState?.params,
-    },
+      background: persistedState?.params?.background ?? currentState.params.background ?? DEFAULT_PARAMS.background,
+    }, {
+      ...currentState.settings,
+      ...persistedState?.settings,
+      ...providerState.settings,
+    }),
     promptLibrary: normalizedPromptLibrary,
     galleryDisplayMode: resolveGalleryDisplayMode(persistedState?.galleryDisplayMode),
     appView: resolveAppView(persistedState?.appView),

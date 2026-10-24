@@ -143,6 +143,40 @@ async function resolveImageAssetViewMetadata(
   return measuredMetadata
 }
 
+async function backfillImageAssetThumbnail(
+  imageId: string,
+  blob: Blob,
+  options: SaveBlobImageAssetOptions,
+) {
+  const generatedThumbnail = await buildThumbnailForBlob(blob)
+  if (!generatedThumbnail) {
+    return
+  }
+
+  await storeImageBlob(blob, {
+    id: imageId,
+    source: options.source,
+    createdAt: options.createdAt,
+    contentHash: options.contentHash,
+    mimeType: options.mimeType,
+    byteSize: options.byteSize,
+    width: generatedThumbnail.width,
+    height: generatedThumbnail.height,
+    replaceExisting: true,
+    thumbnailBlob: generatedThumbnail.thumbnailBlob,
+    thumbnailMimeType: generatedThumbnail.thumbnailMimeType || generatedThumbnail.thumbnailBlob.type || null,
+    thumbnailWidth: generatedThumbnail.thumbnailWidth,
+    thumbnailHeight: generatedThumbnail.thumbnailHeight,
+  })
+
+  setCachedImage(imageId, blob, 'original')
+  setCachedImage(imageId, generatedThumbnail.thumbnailBlob, 'thumbnail')
+  setCachedImageMetadata(imageId, {
+    width: generatedThumbnail.width,
+    height: generatedThumbnail.height,
+  })
+}
+
 export async function saveImageAssetBlob(
   blob: Blob,
   options: SaveBlobImageAssetOptions = {},
@@ -153,18 +187,7 @@ export async function saveImageAssetBlob(
   let thumbnailMimeType = options.thumbnailMimeType ?? null
   let thumbnailWidth = options.thumbnailWidth ?? null
   let thumbnailHeight = options.thumbnailHeight ?? null
-
-  if (!thumbnailBlob || !width || !height) {
-    const generatedThumbnail = await buildThumbnailForBlob(blob)
-    if (generatedThumbnail) {
-      thumbnailBlob ??= generatedThumbnail.thumbnailBlob
-      thumbnailMimeType ??= generatedThumbnail.thumbnailMimeType
-      width ??= generatedThumbnail.width
-      height ??= generatedThumbnail.height
-      thumbnailWidth ??= generatedThumbnail.thumbnailWidth
-      thumbnailHeight ??= generatedThumbnail.thumbnailHeight
-    }
-  }
+  const shouldBackfillThumbnail = !thumbnailBlob
 
   const imageId = await storeImageBlob(blob, {
     id: options.id,
@@ -185,9 +208,15 @@ export async function saveImageAssetBlob(
   setCachedImage(imageId, blob, 'original')
   if (thumbnailBlob) {
     setCachedImage(imageId, thumbnailBlob, 'thumbnail')
+  } else {
+    setCachedImage(imageId, blob, 'thumbnail')
   }
   if (width && height) {
     setCachedImageMetadata(imageId, { width, height })
+  }
+
+  if (shouldBackfillThumbnail) {
+    void backfillImageAssetThumbnail(imageId, blob, options)
   }
 
   return imageId

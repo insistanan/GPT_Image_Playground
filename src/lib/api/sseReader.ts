@@ -2,9 +2,11 @@ import { isRecord } from '../guards'
 import { sanitizeDebugValue, attachDebugResponseMeta } from './debug'
 import { extractErrorMessage } from './errors'
 import {
+  base64ToBlob,
   buildStreamImageEventSignature,
   createApiError,
   decodeResponsesOutputDoneImageEventToAsset,
+  resolveImageMimeType,
 } from './imageTransforms'
 import { emitNewImagesFromPayload } from './imagePayload'
 import {
@@ -21,6 +23,7 @@ import { consumeSseResponseText, isPartialImageSseEventName, tryParseJson } from
 import type {
   ApiDebugRequestLogEntry,
   ApiImageAsset,
+  CallApiOptions,
   ParsedSseEvent,
   ResponsesStreamImageEvent,
   StreamedPayloadResult,
@@ -116,6 +119,51 @@ function extractSseImageNumberField(dataText: string, fieldName: string): number
 
   const parsed = Number(match[1])
   return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function parsePartialImageEvent(
+  event: ParsedSseEvent,
+  fallbackMime: string,
+): { base64: string; mimeType: string; partialImageIndex?: number } | null {
+  if (!isPartialImageSseEventName(event.event) && !(event.dataText && event.dataText.includes('partial_image'))) {
+    return null
+  }
+
+  const base64 =
+    extractSseImageStringField(event.dataText, 'partial_image_b64') ??
+    extractSseImageStringField(event.dataText, 'b64_json') ??
+    extractSseImageStringField(event.dataText, 'result')
+  if (!base64) {
+    return null
+  }
+
+  return {
+    base64,
+    mimeType: resolveImageMimeType(extractSseImageStringField(event.dataText, 'output_format'), fallbackMime),
+    partialImageIndex: extractSseImageNumberField(event.dataText, 'partial_image_index'),
+  }
+}
+
+async function emitPartialImageFromEvent(
+  event: ParsedSseEvent,
+  fallbackMime: string,
+  onPartialImage?: CallApiOptions['onPartialImage'],
+): Promise<void> {
+  if (typeof onPartialImage !== 'function') {
+    return
+  }
+
+  const parsed = parsePartialImageEvent(event, fallbackMime)
+  if (!parsed) {
+    return
+  }
+
+  const blob = await base64ToBlob(parsed.base64, parsed.mimeType)
+  await onPartialImage({
+    blob,
+    mimeType: parsed.mimeType,
+    partialImageIndex: parsed.partialImageIndex,
+  })
 }
 
 function parseResponsesOutputDoneImageEvent(
@@ -222,6 +270,7 @@ export async function readResponsesPayloadStream(
   fallbackMime: string,
   signal: AbortSignal,
   logEntry?: ApiDebugRequestLogEntry,
+  onPartialImage?: CallApiOptions['onPartialImage'],
 ): Promise<StreamedPayloadResult> {
   const requestId = attachDebugResponseMeta(logEntry, response)
   const emittedImageSignatures = new Set<string>()
@@ -236,8 +285,11 @@ export async function readResponsesPayloadStream(
     response,
     signal,
     async (event) => {
-      if (isPartialImageSseEventName(event.event)) {
-        return
+      if (isPartialImageSseEventName(event.event) || event.dataText?.includes('partial_image')) {
+        await emitPartialImageFromEvent(event, fallbackMime, onPartialImage)
+        if (isPartialImageSseEventName(event.event)) {
+          return
+        }
       }
 
       const outputDoneImageEvent = parseResponsesOutputDoneImageEvent(event)
@@ -321,7 +373,6 @@ export async function readResponsesPayloadStream(
     },
     {
       deferJsonParsing: true,
-      discardPartialImageData: true,
     },
   )
 
@@ -392,6 +443,7 @@ export async function readImagesPayloadStream(
   fallbackMime: string,
   signal: AbortSignal,
   logEntry?: ApiDebugRequestLogEntry,
+  onPartialImage?: CallApiOptions['onPartialImage'],
 ): Promise<StreamedPayloadResult> {
   const requestId = attachDebugResponseMeta(logEntry, response)
   const emittedImageSignatures = new Set<string>()
@@ -406,6 +458,13 @@ export async function readImagesPayloadStream(
     response,
     signal,
     async (event) => {
+      if (isPartialImageSseEventName(event.event) || event.dataText?.includes('partial_image')) {
+        await emitPartialImageFromEvent(event, fallbackMime, onPartialImage)
+        if (isPartialImageSseEventName(event.event)) {
+          return
+        }
+      }
+
       if (!event.json || !isRecord(event.json)) {
         return
       }

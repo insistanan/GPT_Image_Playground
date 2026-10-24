@@ -12,6 +12,7 @@ import { isRecord } from '../lib/guards'
 import { isUserAbortLikeError } from '../lib/api/abort'
 import { evictImage, storeImage } from './imageAssets'
 import { useStore } from './state'
+import { clearTaskPartialPreview, setTaskPartialPreview } from './taskPartialPreviews'
 import {
   abortTaskRun,
   appendTaskRunOutputs,
@@ -100,6 +101,9 @@ export async function executeTask(taskId: string, requestSettings: AppSettings) 
     throwIfTaskAbortRequested(taskId)
     const result = await callTaskImageApi(task, requestSettings, {
       onFinalImages: appendOutputImages,
+      onPartialImage: (partial) => {
+        setTaskPartialPreview(taskId, partial.blob)
+      },
       registerAbort: (abort) => {
         registerTaskAborter(taskId, abort)
       },
@@ -135,6 +139,7 @@ export async function executeTask(taskId: string, requestSettings: AppSettings) 
     useStore.getState().setDetailTaskId(taskId)
   } finally {
     clearTaskAbortState(taskId)
+    clearTaskPartialPreview(taskId)
     for (const imageId of task.inputImageIds) {
       evictImage(imageId)
     }

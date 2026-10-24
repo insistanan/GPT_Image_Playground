@@ -14,7 +14,7 @@
 ## Frontend
 
 - 页面/业务模块放在 `src/features/*`，按功能域拆分，不按“所有组件都堆一个目录”组织。
-- 当 feature 内单个组件继续膨胀时，允许在该 feature 内继续下钻子目录，例如 `components/input-bar/*`、`components/prompt-library-drawer/*`、`components/search-bar/*`、`components/size-picker/*`、`components/task-grid/*`、`components/task-card/*`、`components/settings-modal/*`、`components/square/*`、`components/detail-modal/*`、`components/image-edit-modal/*`、`components/lightbox/*`，把容器、分区组件、常量、hooks 和工具拆开。
+- 当 feature 内单个组件继续膨胀时，允许在该 feature 内继续下钻子目录，例如 `components/input-bar/*`、`components/prompt-library-drawer/*`、`components/search-bar/*`、`components/size-picker/*`、`components/task-grid/*`、`components/task-card/*`、`components/settings-modal/*`、`components/square/*`、`components/detail-modal/*`、`components/image-edit-modal/*`、`components/lightbox/*`，把容器、分区组件、常量、hooks 和工具拆开；单字段徽章、单字段表单这类过细文件应收回所属容器。
 - 通用组件放在 `src/shared/components`，只有跨模块复用的组件才进入 shared。
 - 应用级骨架和顶层编排放在 `src/app` 或 `src/App.tsx`，不要把业务细节塞进根组件。
 - 接口调用统一收敛到 `src/lib/api` 或独立 api adapter，UI 组件不要直接承载复杂协议兼容逻辑；协议测试优先跟随 `src/lib/api/__tests__`。

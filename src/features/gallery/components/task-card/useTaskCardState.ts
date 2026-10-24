@@ -4,6 +4,7 @@ import { formatImageRatio } from '../../../../lib/size'
 import { TOUCH_ACTION_REVEAL_DELAY } from './shared'
 import { useImageAssetView } from '../../../../hooks/useImageAssetView'
 import { useNearViewport } from '../../../../hooks/useNearViewport'
+import { useTaskPartialPreview } from '../../../../hooks/useTaskPartialPreview'
 
 interface UseTaskCardStateOptions {
   preferredImageVariant?: 'thumbnail' | 'original'
@@ -41,6 +42,7 @@ export function useTaskCardState(task: TaskRecord, options: UseTaskCardStateOpti
     task.status === 'running'
       ? task.outputImages?.[task.outputImages.length - 1] || ''
       : task.outputImages?.[0] || ''
+  const partialPreviewUrl = useTaskPartialPreview(task.status === 'running' ? task.id : null)
   const { url: thumbnailSrc, metadata: thumbnailMetadata } = useImageAssetView(
     !shouldGateThumbnail || isNearThumbnailViewport ? coverImageId : '',
     {
@@ -60,7 +62,9 @@ export function useTaskCardState(task: TaskRecord, options: UseTaskCardStateOpti
     },
   )
   const displaySrc =
-    preferredImageVariant === 'original' ? preferredSrc || thumbnailSrc : thumbnailSrc
+    task.status === 'running'
+      ? preferredSrc || thumbnailSrc || partialPreviewUrl
+      : preferredImageVariant === 'original' ? preferredSrc || thumbnailSrc : thumbnailSrc
   const coverMetadata =
     preferredImageVariant === 'original'
       ? preferredMetadata ?? thumbnailMetadata

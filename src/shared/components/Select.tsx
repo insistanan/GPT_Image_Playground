@@ -76,13 +76,16 @@ export default function Select({ value, onChange, options, disabled, className }
             <div
               key={option.value}
               onClick={() => {
+                if (option.disabled) return
                 onChange(option.value)
                 setIsOpen(false)
               }}
-              className={`px-3 py-2 text-xs cursor-pointer transition-colors ${
-                option.value === value
-                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.06]'
+              className={`px-3 py-2 text-xs transition-colors ${
+                option.disabled
+                  ? 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+                  : option.value === value
+                    ? 'cursor-pointer bg-blue-50 font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400'
+                    : 'cursor-pointer text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.06]'
               }`}
             >
               {option.label}

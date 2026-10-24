@@ -1,4 +1,4 @@
-import { calculateImageSize, normalizeImageSize, type SizeTier } from '../../../../lib/size'
+import { calculateImageSize, isExperimentalImageSize, normalizeImageSize, type SizeTier } from '../../../../lib/size'
 
 export const TIERS: SizeTier[] = ['1K', '2K', '4K']
 
@@ -44,3 +44,10 @@ export function getOptionButtonClass(active: boolean) {
       : 'border-gray-200/70 bg-white/60 text-gray-600 hover:bg-gray-50 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]'
   }`
 }
+
+export function getPresetSizeLabel(tier: SizeTier, ratio: string) {
+  const size = calculateImageSize(tier, ratio)
+  return size ? normalizeImageSize(size) : ''
+}
+
+export { isExperimentalImageSize }

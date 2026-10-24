@@ -15,6 +15,7 @@ export interface CallImageApiIntent {
   inputImages: ApiInputImage[]
   editMask?: ApiEditMask | null
   onFinalImages?: (images: ApiImageAsset[]) => void | Promise<void>
+  onPartialImage?: (partial: ApiPartialImage) => void | Promise<void>
   registerAbort?: (abort: () => void) => void
 }
 
@@ -38,7 +39,15 @@ export interface CallApiOptions {
   editSelection?: ImageEditSelection | null
   editSourceImageIndex?: number
   onFinalImages?: (images: ApiImageAsset[]) => void | Promise<void>
+  onPartialImage?: (partial: ApiPartialImage) => void | Promise<void>
   registerAbort?: (abort: () => void) => void
+}
+
+export interface ApiPartialImage {
+  blob: Blob
+  mimeType: string
+  requestIndex?: number
+  partialImageIndex?: number
 }
 
 export interface ApiImageAsset {
@@ -135,6 +144,7 @@ export interface ResponsesStreamImageEvent {
   background?: string
   base64?: string
   isPartial: boolean
+  partialImageIndex?: number
 }
 
 export interface StreamedPayloadResult {

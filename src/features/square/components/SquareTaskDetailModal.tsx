@@ -289,7 +289,8 @@ export default function SquareTaskDetailModal({ share, onClose, onOpenImages }: 
             {renderInfoCard('格式', applied?.output_format || params.output_format)}
             {renderInfoCard('传输', transport?.actual === 'stream' ? '流式' : transport?.actual)}
             {renderInfoCard('传输偏好', transport?.requested)}
-            {renderInfoCard('实际背景', applied?.background)}
+            {renderInfoCard('背景', applied?.background || params.background)}
+            {params.input_fidelity ? renderInfoCard('输入保真', params.input_fidelity) : null}
             {renderInfoCard('实际动作', applied?.action)}
             {renderInfoCard('审核', params.moderation)}
             {renderInfoCard('数量', params.n)}

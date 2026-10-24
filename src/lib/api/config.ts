@@ -7,6 +7,7 @@ import type {
 } from '../../types'
 import type { SharedRequestContext } from './types'
 import { buildApiUrl } from '../devProxy'
+import { DEFAULT_IMAGE_MODEL } from '../capabilities'
 import { IMAGE_MIME_BY_EXTENSION } from '../imageMime'
 
 const RESPONSES_PROMPT_REVISION_COMPAT_PREFIX = [
@@ -22,7 +23,7 @@ export function getApiProtocol(settings: AppSettings): ApiProtocol {
 }
 
 export function getResponsesImageModel(settings: AppSettings): string {
-  return settings.responsesImageModel?.trim() || 'gpt-image-2'
+  return settings.responsesImageModel?.trim() || DEFAULT_IMAGE_MODEL
 }
 
 export function getResponsesTransportMode(settings: AppSettings): ResponsesTransportMode {

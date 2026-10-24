@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { parseRatio, type SizeTier } from '../../../../lib/size'
-import { RATIOS, TIERS, getOptionButtonClass, type SizePickerRatioValue } from './shared'
+import { RATIOS, TIERS, getOptionButtonClass, getPresetSizeLabel, type SizePickerRatioValue } from './shared'
 
 interface SizePickerRatioPanelProps {
   tier: SizeTier
@@ -49,7 +49,8 @@ export default function SizePickerRatioPanel({
               className={getOptionButtonClass(ratio === item.value)}
               onClick={() => setRatio(item.value)}
             >
-              {item.label}
+              <span className="block">{item.label}</span>
+              <span className="mt-0.5 block font-mono text-[10px] opacity-70">{getPresetSizeLabel(tier, item.value)}</span>
             </button>
           ))}
           <button

@@ -67,6 +67,10 @@ function isAuthLikeError(error: unknown): error is Error {
  * 中止、认证、配额类错误、特定 HTTP 状态码以及图片下载失败不应触发降级重试。
  * 图片下载失败意味着生成本身已成功计费，任何形式的重新请求都会重复扣费。
  */
+export function shouldBlockConcurrentNFallback(error: unknown): boolean {
+  return shouldBlockTransportFallback(error)
+}
+
 function shouldBlockTransportFallback(error: unknown): boolean {
   if (isImageUrlDownloadError(error)) {
     return true
@@ -148,6 +152,21 @@ function shouldFallbackResponsesStreamToJson(
  * Responses 兼容性重试判断：错误是否表明可尝试不同参数组合。
  * 例如 404/405 可能表示端点不支持当前参数，可尝试兼容模式。
  */
+export function isUnsupportedOutputCountError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const status = (error as { status?: number }).status
+  if (status === 400 && /\bn\b/i.test(error.message)) {
+    return true
+  }
+
+  return /(?:unknown parameter.*\bn\b|invalid.*\bn\b|unsupported.*\bn\b|\bn\b.*(?:not supported|unsupported|unknown|invalid)|output count|number of images|does not support n|n is not supported)/i.test(
+    error.message,
+  )
+}
+
 export function shouldRetryResponsesWithCompatibility(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false

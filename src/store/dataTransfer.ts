@@ -38,6 +38,12 @@ import {
   getImageMimeTypeFromPath,
 } from '../lib/imageMime'
 import { isRemoteImageUrl } from '../lib/imageUrl'
+import {
+  clampOutputImageCount,
+  isTaskBackground,
+  isTaskInputFidelity,
+  isTaskQuality,
+} from '../lib/capabilities'
 import { DEFAULT_PARAMS, resolveTaskParamSizeOrDefault } from './taskParams'
 
 interface PreparedImportedRemoteImage {
@@ -149,10 +155,6 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-function isTaskQuality(value: unknown): value is TaskParams['quality'] {
-  return value === 'auto' || value === 'low' || value === 'medium' || value === 'high'
-}
-
 function isTaskOutputFormat(value: unknown): value is TaskParams['output_format'] {
   return value === 'png' || value === 'jpeg' || value === 'webp'
 }
@@ -222,7 +224,11 @@ function getImportedParams(
         ? outputCompression
         : null,
     moderation: isTaskModeration(record.moderation) ? record.moderation : DEFAULT_PARAMS.moderation,
-    n: typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : DEFAULT_PARAMS.n,
+    n: clampOutputImageCount(
+      typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : DEFAULT_PARAMS.n,
+    ),
+    background: isTaskBackground(record.background) ? record.background : DEFAULT_PARAMS.background,
+    input_fidelity: isTaskInputFidelity(record.input_fidelity) ? record.input_fidelity : null,
   }
 }
 

@@ -4,11 +4,9 @@ import {
   useEffect,
   useState,
   type ChangeEventHandler,
-  type Dispatch,
   type DragEventHandler,
   type KeyboardEventHandler,
   type RefObject,
-  type SetStateAction,
 } from 'react'
 import { DEFAULT_PARAMS, openLightbox, resolveTaskParamSizeOrDefault, useStore, submitTask } from '../../../../store'
 import {
@@ -18,7 +16,14 @@ import {
   type InputImage,
   type TaskParams,
 } from '../../../../types'
+import {
+  getChangedParams,
+  getImageGenerationModel,
+  getImageModelCapabilities,
+  normalizeParamsForSettings,
+} from '../../../../lib/capabilities'
 import { API_MAX_IMAGES } from './shared'
+import { getQualityOptions } from './paramsSectionShared'
 import { useInputImageControls } from './useInputImageControls'
 import { usePromptInputController } from './usePromptInputController'
 import { useIsMobile } from './useIsMobile'
@@ -61,13 +66,12 @@ export interface ReferenceImagesSectionViewModel {
 }
 
 export interface ParamsSectionViewModel {
-  isMobile: boolean
-  mobileAdvancedParamsVisible: boolean
-  setMobileAdvancedParamsVisible: Dispatch<SetStateAction<boolean>>
   activeProviderId: string
   providerOptions: ProviderOption[]
   normalizedSize: string
   params: TaskParams
+  qualityOptions: Array<{ label: string; value: string }>
+  hasInputImages: boolean
   outputCompressionInput: string
   nInput: string
   selectClass: string
@@ -143,7 +147,6 @@ export function useInputBarState(): InputBarViewModel {
   const setConfirmDialog = useStore((state) => state.setConfirmDialog)
 
   // ===== Local state =====
-  const [mobileAdvancedParamsVisible, setMobileAdvancedParamsVisible] = useState(false)
   const [showSizePicker, setShowSizePicker] = useState(false)
   const [outputCompressionInput, setOutputCompressionInput] = useState(
     params.output_compression == null ? '' : String(params.output_compression),
@@ -166,6 +169,9 @@ export function useInputBarState(): InputBarViewModel {
     : '桌面端支持 Ctrl+Enter 直接生成'
   const canSubmit = (prompt.trim() || inputImages.length) && settings.apiKey
   const atImageLimit = inputImages.length >= API_MAX_IMAGES
+  const hasInputImages = inputImages.length > 0
+  const imageModelCapabilities = getImageModelCapabilities(getImageGenerationModel(settings))
+  const qualityOptions = getQualityOptions(imageModelCapabilities.supportsXHighQuality)
   const maskedInputCount = inputImages.filter((image) => Boolean(image.maskDataUrl)).length
   const primaryMaskedInputIndex = inputImages.findIndex((image) => Boolean(image.maskDataUrl))
   const primaryMaskedInput =
@@ -188,11 +194,35 @@ export function useInputBarState(): InputBarViewModel {
     setNInput(String(params.n))
   }, [params.n])
 
+  useEffect(() => {
+    const normalizedParams = normalizeParamsForSettings(params, settings, { hasInputImages })
+    const patch = getChangedParams(params, normalizedParams)
+    if (Object.keys(patch).length > 0) {
+      setParams(patch)
+    }
+  }, [hasInputImages, params, setParams, settings])
+
   // ===== Callbacks =====
+  const commitNormalizedParams = useCallback((nextParams: TaskParams) => {
+    const normalizedParams = normalizeParamsForSettings(nextParams, settings, { hasInputImages })
+    const patch = getChangedParams(params, normalizedParams)
+    if (Object.keys(patch).length > 0) {
+      setParams(patch)
+    }
+    return normalizedParams
+  }, [hasInputImages, params, setParams, settings])
+
+  const applyParamPatch = useCallback((patch: Partial<TaskParams>) => {
+    commitNormalizedParams({
+      ...params,
+      ...patch,
+    })
+  }, [commitNormalizedParams, params])
+
   const commitOutputCompression = useCallback(() => {
     if (outputCompressionInput.trim() === '') {
       setOutputCompressionInput('')
-      setParams({ output_compression: null })
+      applyParamPatch({ output_compression: null })
       return
     }
 
@@ -205,16 +235,19 @@ export function useInputBarState(): InputBarViewModel {
     }
 
     setOutputCompressionInput(String(nextValue))
-    setParams({ output_compression: nextValue })
-  }, [outputCompressionInput, params.output_compression, setParams])
+    applyParamPatch({ output_compression: nextValue })
+  }, [applyParamPatch, outputCompressionInput, params.output_compression])
 
   const commitN = useCallback(() => {
     const nextValue = Number(nInput)
-    const normalizedValue =
+    const requestedValue =
       nInput.trim() === '' ? DEFAULT_PARAMS.n : Number.isNaN(nextValue) ? params.n : nextValue
-    setNInput(String(normalizedValue))
-    setParams({ n: normalizedValue })
-  }, [nInput, params.n, setParams])
+    const normalizedParams = commitNormalizedParams({
+      ...params,
+      n: requestedValue,
+    })
+    setNInput(String(normalizedParams.n))
+  }, [commitNormalizedParams, nInput, params])
 
   const requestClearInputImages = useCallback(() => {
     setConfirmDialog({
@@ -257,19 +290,18 @@ export function useInputBarState(): InputBarViewModel {
 
   // ===== Sub-ViewModel: ParamsSection =====
   const paramsSectionProps: ParamsSectionViewModel = {
-    isMobile,
-    mobileAdvancedParamsVisible,
-    setMobileAdvancedParamsVisible,
     activeProviderId,
     providerOptions,
     normalizedSize,
     params,
+    qualityOptions,
+    hasInputImages,
     outputCompressionInput,
     nInput,
     selectClass,
     onActiveProviderChange: setActiveProvider,
     onOpenSizePicker: () => setShowSizePicker(true),
-    onSetParams: setParams,
+    onSetParams: applyParamPatch,
     onOutputCompressionInputChange: setOutputCompressionInput,
     onCommitOutputCompression: commitOutputCompression,
     onNInputChange: setNInput,
@@ -308,7 +340,7 @@ export function useInputBarState(): InputBarViewModel {
     onOpenMobileDrawer: () => setMobileDrawerOpen(true),
     onCloseMobileDrawer: () => setMobileDrawerOpen(false),
     onFileUpload,
-    onSelectSize: (size) => setParams({ size }),
+    onSelectSize: (size) => applyParamPatch({ size }),
     onCloseSizePicker: () => setShowSizePicker(false),
   }
 }

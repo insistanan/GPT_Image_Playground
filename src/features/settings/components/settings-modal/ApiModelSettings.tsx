@@ -6,7 +6,7 @@ import {
   CHAT_MODEL_OPTIONS,
   IMAGE_MODEL_OPTIONS,
   type CatalogModelOption,
-} from './modelCatalog'
+} from '../../../../lib/capabilities'
 
 interface ApiModelSettingsProps {
   draft: AppSettings
@@ -31,7 +31,7 @@ export default function ApiModelSettings({
   const isResponses = draft.apiProtocol === 'responses'
   const modelOptions = isResponses ? toModelOptions(CHAT_MODEL_OPTIONS) : toModelOptions(IMAGE_MODEL_OPTIONS)
   const modelLabel = isResponses ? 'Responses 主模型（对话）' : '图像模型'
-  const modelPlaceholder = isResponses ? 'gpt-6.1-sol' : 'gpt-image-2'
+  const modelPlaceholder = isResponses ? 'gpt-6.1-sol' : 'gpt-image-2.5-sunburst'
 
   return (
     <>
@@ -56,7 +56,7 @@ export default function ApiModelSettings({
           ) : (
             <>
               Images API 直接调用的图片模型，例如{' '}
-              <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2</code>
+              <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2.5-sunburst</code>
               。切换到 Responses 协议时会自动改为对话模型，并把当前生图模型回填到下方「Responses 图像模型」。
             </>
           )}
@@ -71,13 +71,13 @@ export default function ApiModelSettings({
             onChange={(value) => setDraft((prev) => ({ ...prev, responsesImageModel: value }))}
             onCommit={(value) => commitSettings({ ...draft, responsesImageModel: value })}
             options={toModelOptions(IMAGE_MODEL_OPTIONS)}
-            placeholder="gpt-image-2"
+            placeholder="gpt-image-2.5-sunburst"
             className={fieldClassName}
           />
           <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
             仅 Responses API 生效，作为{' '}
             <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">tools[].model</code>{' '}
-            传入，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2</code>
+            传入，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2.5-sunburst</code>
             。
           </div>
         </label>

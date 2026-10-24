@@ -51,17 +51,17 @@ npm run preview
 │  ├─ features/                 按功能拆分的业务 UI 模块
 │  │  ├─ gallery/
 │  │  │  └─ components/
-│  │  │     ├─ task-card/       任务卡片继续按预览 / 元信息 / 操作区 / hook 拆分
+│  │  │     ├─ task-card/       任务卡片按预览、操作区、状态层、hook 拆分，单字段徽章不再单独成文件
 │  │  │     └─ task-grid/       任务网格继续按容器 / 工具条 / 网格体 / 框选 hook 拆分
 │  │  ├─ input/
 │  │  │  └─ components/
-│  │  │     ├─ input-bar/       输入面板继续按提示词 / 参考图 / 参数 / 本地状态 hook 拆分
+│  │  │     ├─ input-bar/       输入面板按提示词 / 参考图 / 芯片参数 / 本地状态 hook 拆分，单字段表单不再单独成文件
 │  │  │     ├─ prompt-library-drawer/ 提示词库继续按头部 / 保存表单 / 列表拆分
 │  │  │     ├─ search-bar/      搜索栏继续按分类轨道 / 筛选 / 状态 hook / 移动端摘要拆分
 │  │  │     └─ size-picker/     尺寸选择器继续按标签区 / 模式面板 / 共享常量拆分
 │  │  ├─ settings/
 │  │  │  └─ components/
-│  │  │     └─ settings-modal/  设置抽屉继续按供应商 / 凭据 / 请求策略 / 数据管理分区拆分
+│  │  │     └─ settings-modal/  设置抽屉按供应商 / 凭据 / 请求策略 / 数据管理分区拆分，单字段组件不再单独成文件
 │  │  ├─ square/                图片分享广场，按页面 / 卡片 / 分享弹窗 / API adapter / manifest 构建拆分
 │  │  └─ viewer/
 │  │     └─ components/
@@ -71,6 +71,7 @@ npm run preview
 │  ├─ hooks/                    自定义 hooks
 │  ├─ lib/                      基础能力与适配层
 │  │  ├─ api/                   Images / Responses 协议实现
+│  │  ├─ capabilities/          模型目录、官方字段兼容与参数收口
 │  │  ├─ db/                    IndexedDB schema / tasks / images 访问拆分
 │  │  ├─ devProxy.ts            本地代理辅助
 │  │  └─ size.ts                尺寸计算与规整

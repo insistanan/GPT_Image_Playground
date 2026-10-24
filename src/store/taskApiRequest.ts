@@ -1,5 +1,5 @@
 import { callImageApi } from '../lib/api'
-import type { ApiInputImage, ApiImageAsset, CallApiResult } from '../lib/api'
+import type { ApiInputImage, ApiImageAsset, ApiPartialImage, CallApiResult } from '../lib/api'
 import type { AppSettings, TaskRecord } from '../types'
 import { getImageView } from './imageAssets'
 
@@ -7,6 +7,7 @@ export type TaskApiOutputImageAsset = ApiImageAsset
 
 export interface TaskApiRequestHandlers {
   onFinalImages?: (images: TaskApiOutputImageAsset[]) => void | Promise<void>
+  onPartialImage?: (partial: ApiPartialImage) => void | Promise<void>
   registerAbort?: (abort: () => void) => void
   throwIfAborted?: () => void
 }
@@ -77,6 +78,7 @@ export async function callTaskImageApi(
         }
       : null,
     onFinalImages: handlers.onFinalImages,
+    onPartialImage: handlers.onPartialImage,
     registerAbort: handlers.registerAbort,
   })
 }

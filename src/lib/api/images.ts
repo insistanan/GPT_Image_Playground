@@ -83,6 +83,7 @@ export async function callImagesApi(
               ctx.mime,
               ctx.controller.signal,
               debugLogEntry,
+              opts.onPartialImage,
             )
           : null
       const payload = streamResult?.payload ?? (await readImagesPayload(response, debugLogEntry))

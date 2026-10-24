@@ -13,7 +13,7 @@ export default function Header() {
           GPT Image Playground
         </h1>
         <div className="flex flex-shrink-0 items-center gap-1.5">
-          <div className="hidden rounded-full border border-gray-200/80 bg-white/90 p-0.5 shadow-sm dark:border-white/[0.08] dark:bg-gray-900/90 sm:inline-flex">
+          <div className="hidden rounded-full border border-gray-200/80 bg-white/90 p-0.5 shadow-[0_14px_30px_-28px_rgba(15,23,42,0.58)] dark:border-white/[0.08] dark:bg-gray-900/90 sm:inline-flex">
             <button
               type="button"
               onClick={() => setAppView('local')}

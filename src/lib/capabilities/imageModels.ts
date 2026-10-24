@@ -1,6 +1,6 @@
-import type { ApiProtocol, AppSettings } from '../../../../types'
+import type { ApiProtocol, AppSettings } from '../../types'
 
-export const DEFAULT_IMAGE_MODEL = 'gpt-image-2'
+export const DEFAULT_IMAGE_MODEL = 'gpt-image-2.5-sunburst'
 export const DEFAULT_CHAT_MODEL = 'gpt-6.1-sol'
 
 export interface CatalogModelOption {
@@ -15,9 +15,9 @@ export interface CatalogModelOption {
  * 列表仅为常用建议，用户仍可手动输入任意模型 ID。
  */
 export const IMAGE_MODEL_OPTIONS: CatalogModelOption[] = [
-  { value: 'gpt-image-2.5-sunburst', hint: '最新 · 编辑精度' },
+  { value: 'gpt-image-2.5-sunburst', hint: '最新 · 默认 · 编辑精度' },
   { value: 'gpt-image-2.5-flare', hint: '最新 · 速度优先' },
-  { value: 'gpt-image-2', hint: '稳定默认' },
+  { value: 'gpt-image-2', hint: '稳定' },
   { value: 'gpt-image-1.5', hint: '下线 2026-12-01', deprecated: true },
   { value: 'gpt-image-1-mini', hint: '下线 2026-12-01', deprecated: true },
   { value: 'gpt-image-1', hint: '已下线 2026-10-23', deprecated: true },
@@ -36,6 +36,18 @@ export function isImageModelId(id: string | null | undefined): boolean {
   const value = (id ?? '').trim().toLowerCase()
   if (!value) return false
   return value.startsWith('gpt-image') || value.startsWith('chatgpt-image')
+}
+
+export function isGptImage25Model(model: string | null | undefined): boolean {
+  return (model ?? '').trim().toLowerCase().includes('gpt-image-2.5')
+}
+
+/** 当前协议实际用来生图的模型：Images 用顶层 model，Responses 用 tools[].model。 */
+export function getImageGenerationModel(settings: Pick<AppSettings, 'apiProtocol' | 'model' | 'responsesImageModel'>): string {
+  if (settings.apiProtocol === 'responses') {
+    return settings.responsesImageModel?.trim() || DEFAULT_IMAGE_MODEL
+  }
+  return settings.model?.trim() || DEFAULT_IMAGE_MODEL
 }
 
 /**
@@ -58,7 +70,6 @@ export function adjustSettingsForProtocolChange(
     return { ...draft, apiProtocol: nextProtocol, model: imageModel }
   }
 
-  // responses
   if (isImageModelId(draft.model)) {
     return {
       ...draft,

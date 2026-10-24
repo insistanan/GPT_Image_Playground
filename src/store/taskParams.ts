@@ -8,6 +8,8 @@ export const DEFAULT_PARAMS: TaskParams = {
   output_compression: null,
   moderation: 'auto',
   n: 1,
+  background: 'auto',
+  input_fidelity: null,
 }
 
 export function resolveTaskParamSizeOrDefault(size: string): string {

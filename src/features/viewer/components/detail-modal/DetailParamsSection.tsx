@@ -106,7 +106,17 @@ export default function DetailParamsSection(props: DetailParamsSectionProps) {
           : null}
         {!isImageTask && transportLabel ? renderValueCard('传输', transportLabel) : null}
         {!isImageTask && transportRequested ? renderValueCard('传输偏好', transportRequested) : null}
-        {!isImageTask && appliedBackground ? renderValueCard('实际背景', appliedBackground) : null}
+        {!isImageTask
+          ? renderRequestedParamCard(
+              '背景',
+              task.params.background,
+              appliedBackground || task.params.background,
+              appliedBackground,
+            )
+          : null}
+        {!isImageTask && task.params.input_fidelity
+          ? renderValueCard('输入保真', task.params.input_fidelity)
+          : null}
         {!isImageTask && appliedAction ? renderValueCard('实际动作', appliedAction) : null}
         {!isImageTask ? renderValueCard('审核', task.params.moderation) : null}
         {!isImageTask ? renderValueCard('数量', String(task.params.n)) : null}

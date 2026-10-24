@@ -61,16 +61,16 @@
 React UI
   ├─ features/                    输入区、画廊、查看器、设置等按功能拆分的 UI 模块
   │  ├─ input/components/
-  │  │  ├─ input-bar/            输入面板按提示词 / 参考图 / 参数 / 本地状态 hook 拆分
+  │  │  ├─ input-bar/            输入面板按提示词 / 参考图 / 芯片参数 / 本地状态 hook 拆分
   │  │  ├─ prompt-library-drawer/ 提示词库按头部 / 保存表单 / 列表拆分
   │  │  ├─ search-bar/           画廊筛选栏按摘要、分类轨道、筛选区、状态 hook / 循环滚动 hook 拆分
   │  │  └─ size-picker/          尺寸选择器按模式面板 / 标签区 / 共享常量拆分
   │  ├─ settings/components/
-  │  │  └─ settings-modal/       设置抽屉按供应商 / 凭据 / 请求策略 / 数据管理拆分
+  │  │  └─ settings-modal/       设置抽屉按供应商 / 凭据 / 请求策略 / 数据管理拆分，单字段组件不再单独成文件
   │  ├─ square/                  图片分享广场，按页面 / 卡片 / 分享弹窗 / API adapter / manifest 构建拆分
   │  ├─ gallery/components/
   │  │  ├─ task-grid/            网格容器按框选 hook、工具条、网格体、纯图拼贴模式拆分
-  │  │  ├─ task-card/            卡片按预览区、元信息、操作区、状态 hook 拆分
+  │  │  ├─ task-card/            卡片按预览、操作区、状态层、hook 拆分，单字段徽章不再单独成文件
   │  │  └─ ...                   右键菜单、移动分类弹窗等独立组件
   │  └─ viewer/components/
   │     ├─ detail-modal/         详情弹窗按预览区、信息区、图片状态 hook 拆分
@@ -81,6 +81,7 @@ React UI
   ├─ store/                      状态管理、任务编排、分类/收藏/回收站、导入导出
   │  ├─ slices/                  provider / inputDraft / task / viewer / dialog 基础切片
   │  └─ taskRunner / gallery     任务运行时与画廊领域动作继续拆分
+  ├─ lib/capabilities/           模型目录、官方字段兼容与参数收口
   ├─ lib/api/                    Images API / Responses API / SSE 解析 / 请求规划 / 响应归一化
   │  └─ __tests__/               协议层单测
   ├─ lib/db/                     IndexedDB schema / task / image 读写与迁移
@@ -132,7 +133,7 @@ workers/square-api
   IndexedDB 访问已拆到 `src/lib/db/schema.ts`、`src/lib/db/tasks.ts`、`src/lib/db/images.ts`，分别处理 schema、任务记录和图片记录/迁移逻辑，避免协议层和 UI 直接接触底层存储细节。
 
 - 组件分层细化
-  当单个功能模块继续膨胀时，会在 feature 内部继续下钻子目录，例如 `input-bar/`、`prompt-library-drawer/`、`search-bar/`、`size-picker/`、`task-grid/`、`task-card/`、`settings-modal/`、`square/`、`detail-modal/`、`image-edit-modal/`、`lightbox/`，把容器、分区组件、交互 hook、选项常量和交互壳层拆开，而不是继续把实现堆回单个入口文件。
+  当单个功能模块继续膨胀时，会在 feature 内部继续下钻子目录，例如 `input-bar/`、`prompt-library-drawer/`、`search-bar/`、`size-picker/`、`task-grid/`、`task-card/`、`settings-modal/`、`square/`、`detail-modal/`、`image-edit-modal/`、`lightbox/`，把容器、分区组件、交互 hook、选项常量和交互壳层拆开；单字段徽章、单字段表单这类过细文件应收回所属容器，而不是继续把实现堆回单个入口文件。
 
 - 长请求传输策略
   设置中的传输偏好会同时影响 `Images API` 与 `Responses API`。兼容时优先走流式；不兼容时自动回退到普通 JSON，并把任务最终实际走的是 `流式 / JSON / JSON（降级）` 记录到任务元信息与界面状态里。
@@ -393,15 +394,15 @@ Invoke-RestMethod "$api/api/v1/admin/cleanup" `
 │  ├─ app/                      应用级骨架组件
 │  ├─ features/                 按功能拆分的业务 UI 模块
 │  │  ├─ gallery/components/
-│  │  │  ├─ task-card/          任务卡片拆分后的真实实现
+│  │  │  ├─ task-card/          任务卡片按预览、操作区、状态层拆分后的真实实现
 │  │  │  └─ task-grid/          任务网格与纯图拼贴模式
 │  │  ├─ input/components/
-│  │  │  ├─ input-bar/          输入面板拆分后的真实实现
+│  │  │  ├─ input-bar/          输入面板按提示词 / 参考图 / 芯片参数拆分后的真实实现
 │  │  │  ├─ prompt-library-drawer/ 提示词库拆分后的真实实现
 │  │  │  ├─ search-bar/         搜索/分类栏拆分后的真实实现
 │  │  │  └─ size-picker/        尺寸选择器拆分后的真实实现
 │  │  ├─ settings/components/
-│  │  │  └─ settings-modal/     设置抽屉按 API 分区 / 数据管理拆分后的真实实现
+│  │  │  └─ settings-modal/     设置抽屉按 API 分区 / 数据管理拆分后的真实实现，单字段组件不再单独成文件
 │  │  ├─ square/                图片分享广场，按页面 / 卡片 / 分享弹窗 / API adapter / manifest 构建拆分
 │  │  └─ viewer/components/
 │  │     ├─ detail-modal/       详情弹窗拆分后的真实实现
@@ -409,8 +410,9 @@ Invoke-RestMethod "$api/api/v1/admin/cleanup" `
 │  │     └─ lightbox/           大图查看拆分后的真实实现
 │  ├─ hooks/                    自定义 hooks
 │  ├─ lib/
-│  │  ├─ api/                   协议适配、请求规划、SSE 解析、归一化
+│  │  ├─ api/
 │  │  │  └─ __tests__/          协议层单测
+│  │  ├─ capabilities/          模型目录、官方字段兼容与参数收口
 │  │  ├─ db/                    schema / tasks / images
 │  │  ├─ devProxy.ts            本地代理辅助
 │  │  └─ size.ts                尺寸处理

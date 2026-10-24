@@ -16,7 +16,7 @@ export default function SearchBar() {
   return (
     <>
       <div ref={state.rootRef} className="relative sticky top-12 z-40 pt-1.5 pb-0">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.35rem] border border-gray-200/80 bg-white/[0.84] px-2 py-1.5 shadow-[0_16px_32px_-30px_rgba(15,23,42,0.5)] backdrop-blur-sm dark:border-white/[0.08] dark:bg-gray-900/[0.7]">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-full border border-gray-200/80 bg-white/[0.84] px-2 py-1.5 shadow-[0_16px_32px_-30px_rgba(15,23,42,0.5)] backdrop-blur-sm dark:border-white/[0.08] dark:bg-gray-900/[0.7]">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {state.taskView === 'gallery' && (
               <button

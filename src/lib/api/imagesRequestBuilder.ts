@@ -1,4 +1,5 @@
 import { buildRequestUrl } from './config'
+import { appendSharedImageParams } from './sharedImageParams'
 import { createApiError, dataUrlToBlob, isDataUrl, isHttpUrl } from './imageTransforms'
 import type { CallApiOptions, ImagesRequestPlan, SharedRequestContext } from './types'
 
@@ -27,12 +28,13 @@ function appendCommonEditFormFields(
   formData.append('quality', params.quality)
   formData.append('output_format', params.output_format)
   formData.append('moderation', params.moderation)
-  if (params.n > 1) {
-    formData.append('n', String(params.n))
-  }
   if (params.output_format !== 'png' && params.output_compression != null) {
     formData.append('output_compression', String(params.output_compression))
   }
+  appendSharedImageParams(formData, params, {
+    isEdit: true,
+    stream: plan.transport === 'stream',
+  })
   if (plan.transport === 'stream') {
     formData.append('stream', 'true')
   }
@@ -56,9 +58,9 @@ function buildImagesGenerateRequestSpec({
   if (params.output_format !== 'png' && params.output_compression != null) {
     body.output_compression = params.output_compression
   }
-  if (params.n > 1) {
-    body.n = params.n
-  }
+  appendSharedImageParams(body, params, {
+    stream: plan.transport === 'stream',
+  })
   if (plan.transport === 'stream') {
     body.stream = true
   }
@@ -103,12 +105,13 @@ async function buildImagesEditJsonRequestSpec({
     moderation: params.moderation,
   }
 
-  if (params.n > 1) {
-    body.n = params.n
-  }
   if (params.output_format !== 'png' && params.output_compression != null) {
     body.output_compression = params.output_compression
   }
+  appendSharedImageParams(body, params, {
+    isEdit: true,
+    stream: plan.transport === 'stream',
+  })
   if (editMaskDataUrl) {
     if (!isDataUrl(editMaskDataUrl) && !isHttpUrl(editMaskDataUrl)) {
       throw createApiError('编辑蒙版格式不受支持，请使用本地图片或公网图片 URL')
@@ -174,10 +177,13 @@ async function buildImagesEditMultipartRequestSpec({
       output_format: params.output_format,
       moderation: params.moderation,
       n: params.n > 1 ? params.n : undefined,
+      background: params.background,
+      input_fidelity: params.input_fidelity ?? undefined,
       output_compression: params.output_format !== 'png' ? params.output_compression : undefined,
       imageCount: inputImageDataUrls.length,
       hasMask: Boolean(editMaskDataUrl),
       stream: plan.transport === 'stream',
+      partial_images: plan.transport === 'stream' ? 1 : undefined,
       bodyMode: plan.bodyMode,
     },
     requestInit: {

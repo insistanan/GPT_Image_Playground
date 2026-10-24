@@ -1,3 +1,4 @@
+import { getChangedParams, normalizeParamsForSettings } from '../lib/capabilities'
 import { normalizeImageSize } from '../lib/size'
 import type {
   AppSettings,
@@ -17,7 +18,7 @@ import {
 } from '../types'
 import { findCategoryById, findProviderById, getProviderSettings } from './domain'
 import { resolveTaskParentFromInputImages } from './taskLineage'
-import { resolveTaskParamSizeOrDefault } from './taskParams'
+import { stageTaskDraftAssets } from './taskDraftAssets'
 import { createGenerationTaskRecord } from './taskRecords'
 
 export type PrepareTaskDraftFailureReason =
@@ -91,11 +92,11 @@ export function buildPreparedTaskDraft(
   snapshot: TaskDraftStoreSnapshot,
   stagedAssets: StagedTaskDraftAssets,
 ): PreparedTaskDraft {
-  const normalizedSize = resolveTaskParamSizeOrDefault(snapshot.params.size)
-  const normalizedParams = {
-    ...snapshot.params,
-    size: normalizedSize,
-  }
+  const normalizedParams = normalizeParamsForSettings(
+    snapshot.params,
+    snapshot.settings,
+    { hasInputImages: snapshot.inputImages.length > 0 },
+  )
 
   const selectedProvider = findProviderById(snapshot.providers, snapshot.activeProviderId)
   const selectedCategory =
@@ -125,12 +126,10 @@ export function buildPreparedTaskDraft(
       editSelection: stagedAssets.maskedInput?.editSelection ?? null,
     }),
     requestSettings,
-    normalizedParamsPatch:
-      normalizedSize !== snapshot.params.size
-        ? {
-            size: normalizedSize,
-          }
-        : undefined,
+    normalizedParamsPatch: (() => {
+      const patch = getChangedParams(snapshot.params, normalizedParams)
+      return Object.keys(patch).length > 0 ? patch : undefined
+    })(),
   }
 }
 
@@ -166,5 +165,34 @@ export function writeImageEditDraft(input: ImageEditDraftWriteInput): ImageEditD
         lineageParentImageId: input.session.lineageParentImageId ?? input.session.sourceImageId,
       },
     ],
+  }
+}
+
+
+export type PrepareTaskDraftResult =
+  | {
+      ok: true
+      draft: PreparedTaskDraft
+    }
+  | {
+      ok: false
+      reason: PrepareTaskDraftFailureReason
+    }
+
+export async function prepareCurrentTaskDraft(
+  snapshot: TaskDraftStoreSnapshot,
+): Promise<PrepareTaskDraftResult> {
+  const reason = validateTaskDraftSnapshot(snapshot)
+  if (reason) {
+    return {
+      ok: false,
+      reason,
+    }
+  }
+
+  const stagedAssets = await stageTaskDraftAssets(snapshot.inputImages)
+  return {
+    ok: true,
+    draft: buildPreparedTaskDraft(snapshot, stagedAssets),
   }
 }

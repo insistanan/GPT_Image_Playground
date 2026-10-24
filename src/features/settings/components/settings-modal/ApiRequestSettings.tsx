@@ -2,7 +2,7 @@ import type { AppSettings, ApiProtocol, RequestMode } from '../../../../types'
 import type { DevProxyConfig } from '../../../../lib/devProxy'
 import Select from '../../../../shared/components/Select'
 import { API_PROTOCOL_OPTIONS, REQUEST_MODE_OPTIONS } from './options'
-import { adjustSettingsForProtocolChange } from './modelCatalog'
+import { adjustSettingsForProtocolChange } from '../../../../lib/capabilities'
 import { fieldClassName } from './apiSettingsShared'
 
 interface ApiRequestSettingsProps {
