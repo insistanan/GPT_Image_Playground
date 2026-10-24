@@ -1,6 +1,12 @@
-import type { AppSettings } from '../../../../types'
 import type { Dispatch, SetStateAction } from 'react'
+import type { AppSettings } from '../../../../types'
+import ModelCombobox, { type ModelOption } from '../../../../shared/components/ModelCombobox'
 import { fieldClassName } from './apiSettingsShared'
+import {
+  CHAT_MODEL_OPTIONS,
+  IMAGE_MODEL_OPTIONS,
+  type CatalogModelOption,
+} from './modelCatalog'
 
 interface ApiModelSettingsProps {
   draft: AppSettings
@@ -8,42 +14,74 @@ interface ApiModelSettingsProps {
   commitSettings: (nextDraft: AppSettings) => void
 }
 
+function toModelOptions(catalog: CatalogModelOption[]): ModelOption[] {
+  return catalog.map((item) => ({
+    value: item.value,
+    label: item.label,
+    hint: item.hint,
+    deprecated: item.deprecated,
+  }))
+}
+
 export default function ApiModelSettings({
   draft,
   setDraft,
   commitSettings,
 }: ApiModelSettingsProps) {
+  const isResponses = draft.apiProtocol === 'responses'
+  const modelOptions = isResponses ? toModelOptions(CHAT_MODEL_OPTIONS) : toModelOptions(IMAGE_MODEL_OPTIONS)
+  const modelLabel = isResponses ? 'Responses 主模型（对话）' : '图像模型'
+  const modelPlaceholder = isResponses ? 'gpt-6.1-sol' : 'gpt-image-2'
+
   return (
     <>
       <label className="block">
-        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">模型 ID</span>
-        <input
+        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">{modelLabel}</span>
+        <ModelCombobox
           value={draft.model}
-          onChange={(event) => setDraft((prev) => ({ ...prev, model: event.target.value }))}
-          onBlur={(event) => commitSettings({ ...draft, model: event.target.value })}
-          type="text"
-          placeholder="gpt-image-2"
+          onChange={(value) => setDraft((prev) => ({ ...prev, model: value }))}
+          onCommit={(value) => commitSettings({ ...draft, model: value })}
+          options={modelOptions}
+          placeholder={modelPlaceholder}
           className={fieldClassName}
         />
         <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          Images API 下这里是直接调用的图片模型；Responses API 下这里是顶层主模型，应该填可用的文本模型，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-5.5</code>，不要填 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-*</code>。
+          {isResponses ? (
+            <>
+              Responses API 顶层主模型，应填可用的文本/对话模型，例如{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-6.1-sol</code>
+              ，不要填 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-*</code>
+              。切换到 Images 协议时会自动改为生图模型。
+            </>
+          ) : (
+            <>
+              Images API 直接调用的图片模型，例如{' '}
+              <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2</code>
+              。切换到 Responses 协议时会自动改为对话模型，并把当前生图模型回填到下方「Responses 图像模型」。
+            </>
+          )}
         </div>
       </label>
 
-      <label className="block">
-        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">Responses 图像模型</span>
-        <input
-          value={draft.responsesImageModel}
-          onChange={(event) => setDraft((prev) => ({ ...prev, responsesImageModel: event.target.value }))}
-          onBlur={(event) => commitSettings({ ...draft, responsesImageModel: event.target.value })}
-          type="text"
-          placeholder="gpt-image-2"
-          className={fieldClassName}
-        />
-        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          仅 Responses API 生效，会作为 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">tools[].model</code> 传入，通常填 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2</code>。
-        </div>
-      </label>
+      {isResponses ? (
+        <label className="block">
+          <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">Responses 图像模型</span>
+          <ModelCombobox
+            value={draft.responsesImageModel}
+            onChange={(value) => setDraft((prev) => ({ ...prev, responsesImageModel: value }))}
+            onCommit={(value) => commitSettings({ ...draft, responsesImageModel: value })}
+            options={toModelOptions(IMAGE_MODEL_OPTIONS)}
+            placeholder="gpt-image-2"
+            className={fieldClassName}
+          />
+          <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+            仅 Responses API 生效，作为{' '}
+            <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">tools[].model</code>{' '}
+            传入，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2</code>
+            。
+          </div>
+        </label>
+      ) : null}
     </>
   )
 }

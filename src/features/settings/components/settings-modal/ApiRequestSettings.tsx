@@ -2,6 +2,7 @@ import type { AppSettings, ApiProtocol, RequestMode } from '../../../../types'
 import type { DevProxyConfig } from '../../../../lib/devProxy'
 import Select from '../../../../shared/components/Select'
 import { API_PROTOCOL_OPTIONS, REQUEST_MODE_OPTIONS } from './options'
+import { adjustSettingsForProtocolChange } from './modelCatalog'
 import { fieldClassName } from './apiSettingsShared'
 
 interface ApiRequestSettingsProps {
@@ -23,13 +24,16 @@ export default function ApiRequestSettings({
         <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">API 协议</span>
         <Select
           value={draft.apiProtocol}
-          onChange={(value) => commitSettings({ ...draft, apiProtocol: value as ApiProtocol })}
+          onChange={(value) =>
+            commitSettings(adjustSettingsForProtocolChange(draft, value as ApiProtocol))
+          }
           options={API_PROTOCOL_OPTIONS}
           className={fieldClassName}
         />
         <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-          <div>Images API：直接请求 `/v1/images/generations` 或 `/v1/images/edits`。</div>
-          <div>Responses API：直接请求 `/v1/responses`，不再自动回退或切换。</div>
+          <div>Images API：直接请求 /v1/images/generations 或 /v1/images/edits。</div>
+          <div>Responses API：直接请求 /v1/responses，不再自动回退或切换。</div>
+          <div>切换协议时会自动把模型字段对齐到对应类型（生图 / 对话）。</div>
         </div>
       </label>
 
