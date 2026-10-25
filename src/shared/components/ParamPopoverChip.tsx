@@ -1,11 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useFloatingPanel } from '@/hooks/useFloatingPanel'
 
 export const CHIP_BASE_CLASS = 'h-8 min-w-0 px-3 rounded-full text-xs transition-colors duration-200 focus:outline-none'
 export const CHIP_IDLE_CLASS = 'bg-black/[0.04] text-gray-700 hover:bg-black/[0.07] dark:bg-white/[0.06] dark:text-gray-200 dark:hover:bg-white/[0.1]'
 export const CHIP_ACTIVE_CLASS = 'bg-blue-500/[0.1] text-blue-600 hover:bg-blue-500/[0.14] dark:bg-blue-500/[0.16] dark:text-blue-400 dark:hover:bg-blue-500/[0.22]'
-const PANEL_WIDTH = 220
-const VIEWPORT_PADDING = 8
+const PANEL_WIDTH = 272
 
 interface ParamPopoverChipProps {
   label: string
@@ -13,25 +13,6 @@ interface ParamPopoverChipProps {
   active?: boolean
   className?: string
   children?: ReactNode
-}
-
-function getClipRect(element: HTMLElement | null) {
-  const viewportRight = window.innerWidth - VIEWPORT_PADDING
-  const viewportLeft = VIEWPORT_PADDING
-  if (!element) {
-    return { left: viewportLeft, right: viewportRight }
-  }
-
-  const sidebar = element.closest('aside') ?? element.closest('[data-input-panel]')
-  if (sidebar) {
-    const rect = sidebar.getBoundingClientRect()
-    return {
-      left: Math.max(viewportLeft, rect.left + VIEWPORT_PADDING),
-      right: Math.min(viewportRight, rect.right - VIEWPORT_PADDING),
-    }
-  }
-
-  return { left: viewportLeft, right: viewportRight }
 }
 
 export default function ParamPopoverChip({
@@ -42,41 +23,15 @@ export default function ParamPopoverChip({
   children,
 }: ParamPopoverChipProps) {
   const [open, setOpen] = useState(false)
-  const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
   const buttonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const hasPanel = Boolean(children)
-
-  useLayoutEffect(() => {
-    if (!open || !hasPanel) return
-
-    const updatePosition = () => {
-      const button = buttonRef.current
-      if (!button) return
-      const rect = button.getBoundingClientRect()
-      const clip = getClipRect(button)
-      const width = Math.min(PANEL_WIDTH, Math.max(160, clip.right - clip.left))
-      const alignRight = rect.left + width > clip.right
-      const left = alignRight
-        ? Math.max(clip.left, rect.right - width)
-        : Math.min(rect.left, clip.right - width)
-      setPanelStyle({
-        position: 'fixed',
-        top: rect.bottom + 6,
-        left,
-        width,
-        zIndex: 80,
-      })
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
-    return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
-    }
-  }, [hasPanel, open])
+  const { style: panelStyle } = useFloatingPanel({
+    open: open && hasPanel,
+    anchorRef: buttonRef,
+    panelRef,
+    width: PANEL_WIDTH,
+  })
 
   useEffect(() => {
     if (!open) return
@@ -128,7 +83,7 @@ export default function ParamPopoverChip({
             <div
               ref={panelRef}
               style={panelStyle}
-              className="rounded-2xl border border-gray-200/80 bg-white/95 p-3 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95"
+              className="overflow-y-auto overscroll-contain rounded-2xl border border-gray-200/80 bg-white/95 p-3.5 shadow-[0_20px_48px_-20px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95"
             >
               {children}
             </div>,

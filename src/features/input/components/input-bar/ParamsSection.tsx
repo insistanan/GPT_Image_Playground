@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { TaskBackground, TaskInputFidelity, TaskParams } from '@/types'
 import { MAX_OPENAI_OUTPUT_IMAGES } from '@/lib/capabilities'
 import Select from '@/shared/components/Select'
+import SegmentedControl from '@/shared/components/SegmentedControl'
 import ParamPopoverChip, {
   CHIP_ACTIVE_CLASS,
   CHIP_BASE_CLASS,
@@ -14,6 +15,7 @@ import {
   OUTPUT_FORMAT_OPTIONS,
   type ProviderOption,
 } from './paramsSectionShared'
+import { SECTION_TITLE_CLASS } from './shared'
 
 interface ParamsSectionProps {
   activeProviderId: string
@@ -24,7 +26,6 @@ interface ParamsSectionProps {
   hasInputImages: boolean
   outputCompressionInput: string
   nInput: string
-  selectClass: string
   onActiveProviderChange: (providerId: string) => void
   onOpenSizePicker: () => void
   onSetParams: (params: Partial<TaskParams>) => void
@@ -46,7 +47,7 @@ function getInputFidelityLabel(value: TaskParams['input_fidelity']) {
   return INPUT_FIDELITY_OPTIONS.find((option) => option.value === (value ?? ''))?.label ?? '默认'
 }
 
-function CompactField({
+function FieldGroup({
   label,
   children,
 }: {
@@ -54,10 +55,10 @@ function CompactField({
   children: ReactNode
 }) {
   return (
-    <label className="block">
+    <div className="block">
       <span className={PANEL_LABEL_CLASS}>{label}</span>
       {children}
-    </label>
+    </div>
   )
 }
 
@@ -126,7 +127,6 @@ export default function ParamsSection({
   hasInputImages,
   outputCompressionInput,
   nInput,
-  selectClass,
   onActiveProviderChange,
   onOpenSizePicker,
   onSetParams,
@@ -135,12 +135,9 @@ export default function ParamsSection({
   onNInputChange,
   onCommitN,
 }: ParamsSectionProps) {
-  const providerLabel = providerOptions.find((option) => option.value === activeProviderId)?.label ?? '供应商'
-  const jpegSelected = params.output_format === 'jpeg'
   const backgroundOptions = BACKGROUND_OPTIONS.map((option) =>
-    option.value === 'transparent' && jpegSelected ? { ...option, disabled: true } : option,
+    option.value === 'transparent' && params.output_format === 'jpeg' ? { ...option, disabled: true } : option,
   )
-  const compactSelectClass = `${selectClass} py-2 text-xs`
   const moreActive =
     params.output_format !== 'png' ||
     params.background !== 'auto' ||
@@ -156,18 +153,17 @@ export default function ParamsSection({
     .join(' · ')
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
+      <span className={SECTION_TITLE_CLASS}>生成参数</span>
       <div className={CHIP_ROW_CLASS}>
-        <ParamPopoverChip label="供应商" summary={providerLabel} active={providerOptions.length > 1}>
-          <CompactField label="供应商">
-            <Select
-              value={activeProviderId}
-              onChange={(value) => onActiveProviderChange(String(value))}
-              options={providerOptions}
-              className={compactSelectClass}
-            />
-          </CompactField>
-        </ParamPopoverChip>
+        <Select
+          variant="chip"
+          label="供应商"
+          active={providerOptions.length > 1}
+          value={activeProviderId}
+          onChange={(value) => onActiveProviderChange(String(value))}
+          options={providerOptions}
+        />
 
         <button
           type="button"
@@ -179,16 +175,14 @@ export default function ParamsSection({
           <span className="min-w-0 truncate font-mono text-[11px] text-gray-500 dark:text-gray-400">{normalizedSize}</span>
         </button>
 
-        <ParamPopoverChip label="质量" summary={params.quality} active={params.quality !== 'auto'}>
-          <CompactField label="质量">
-            <Select
-              value={params.quality}
-              onChange={(value) => onSetParams({ quality: value as TaskParams['quality'] })}
-              options={qualityOptions}
-              className={compactSelectClass}
-            />
-          </CompactField>
-        </ParamPopoverChip>
+        <Select
+          variant="chip"
+          label="质量"
+          active={params.quality !== 'auto'}
+          value={params.quality}
+          onChange={(value) => onSetParams({ quality: value as TaskParams['quality'] })}
+          options={qualityOptions}
+        />
 
         <CountChip
           value={params.n}
@@ -200,16 +194,16 @@ export default function ParamsSection({
 
         <ParamPopoverChip label="更多" summary={moreSummary} active={moreActive}>
           <div className="space-y-3">
-            <CompactField label="格式">
-              <Select
+            <FieldGroup label="格式">
+              <SegmentedControl
+                ariaLabel="输出格式"
                 value={params.output_format}
-                onChange={(value) => onSetParams({ output_format: value as TaskParams['output_format'] })}
-                options={OUTPUT_FORMAT_OPTIONS as unknown as Array<{ label: string; value: string }>}
-                className={compactSelectClass}
+                onChange={(value) => onSetParams({ output_format: value })}
+                options={OUTPUT_FORMAT_OPTIONS}
               />
-            </CompactField>
+            </FieldGroup>
 
-            <CompactField label="压缩率">
+            <FieldGroup label="压缩率">
               <input
                 value={outputCompressionInput}
                 onChange={(event) => onOutputCompressionInputChange(event.target.value)}
@@ -219,44 +213,47 @@ export default function ParamsSection({
                 min={0}
                 max={100}
                 placeholder="0-100"
+                aria-label="压缩率"
                 className={`w-full rounded-xl border border-gray-200/60 px-3 py-2 text-xs shadow-sm outline-none dark:border-white/[0.08] ${
                   params.output_format === 'png'
                     ? 'cursor-not-allowed bg-gray-100/50 opacity-50 dark:bg-white/[0.05]'
                     : 'bg-white/70 dark:bg-white/[0.03]'
                 }`}
               />
-            </CompactField>
+            </FieldGroup>
 
-            <CompactField label="背景">
-              <Select
+            <FieldGroup label="背景">
+              <SegmentedControl
+                ariaLabel="背景"
                 value={params.background}
-                onChange={(value) => onSetParams({ background: value as TaskBackground })}
-                options={backgroundOptions as unknown as Array<{ label: string; value: string }>}
-                className={compactSelectClass}
+                onChange={(value: TaskBackground) => onSetParams({ background: value })}
+                options={backgroundOptions}
               />
-            </CompactField>
+            </FieldGroup>
 
-            <CompactField label="审核">
-              <Select
+            <FieldGroup label="审核">
+              <SegmentedControl
+                ariaLabel="审核强度"
                 value={params.moderation}
-                onChange={(value) => onSetParams({ moderation: value as TaskParams['moderation'] })}
-                options={MODERATION_OPTIONS as unknown as Array<{ label: string; value: string }>}
-                className={compactSelectClass}
+                onChange={(value) => onSetParams({ moderation: value })}
+                options={MODERATION_OPTIONS}
               />
-            </CompactField>
+            </FieldGroup>
 
-            <CompactField label="输入保真">
-              <Select
-                value={params.input_fidelity ?? ''}
-                onChange={(value) =>
-                  onSetParams({
-                    input_fidelity: value ? (value as TaskInputFidelity) : null,
-                  })
-                }
-                options={INPUT_FIDELITY_OPTIONS as unknown as Array<{ label: string; value: string }>}
-                className={`${compactSelectClass} ${hasInputImages ? '' : 'opacity-60'}`}
-              />
-            </CompactField>
+            <FieldGroup label="输入保真">
+              <div className={hasInputImages ? '' : 'opacity-60'}>
+                <SegmentedControl
+                  ariaLabel="输入保真"
+                  value={params.input_fidelity ?? ''}
+                  onChange={(value) =>
+                    onSetParams({
+                      input_fidelity: value ? (value as TaskInputFidelity) : null,
+                    })
+                  }
+                  options={INPUT_FIDELITY_OPTIONS}
+                />
+              </div>
+            </FieldGroup>
           </div>
         </ParamPopoverChip>
       </div>

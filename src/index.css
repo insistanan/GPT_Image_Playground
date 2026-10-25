@@ -8,6 +8,14 @@
 :root {
   --font-ui-sans: 'HarmonyOS Sans SC', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: 'Maple Mono', 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  /* 让原生滚动条、下拉等控件跟随明暗主题 */
+  color-scheme: light dark;
+}
+
+/* 键盘聚焦时显示统一的高亮环，鼠标点击不触发 */
+:focus-visible {
+  outline: 2px solid rgb(59 130 246 / 0.55);
+  outline-offset: 2px;
 }
 
 * {
@@ -44,6 +52,16 @@ input[type="number"] {
 @keyframes pulse-border {
   0%, 100% { border-color: #3b82f6; }
   50% { border-color: #93c5fd; }
+}
+
+/* 生成中的任务卡片：边框呼吸提示 */
+.generating {
+  animation: pulse-border 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .generating {
+    animation: none;
+  }
 }
 .hide-scrollbar {
   -ms-overflow-style: none;

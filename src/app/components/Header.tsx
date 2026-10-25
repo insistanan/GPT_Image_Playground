@@ -9,9 +9,19 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08]">
       <div className="mx-auto flex h-12 max-w-7xl items-center justify-between gap-3 px-4">
-        <h1 className="min-w-0 flex-1 truncate text-[15px] font-bold tracking-tight text-gray-800 dark:text-gray-100 sm:text-base">
-          GPT Image Playground
-        </h1>
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <span
+            aria-hidden
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-[0_8px_16px_-8px_rgba(37,99,235,0.9)]"
+          >
+            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 3 13.9 7.6 18.5 9.5 13.9 11.4 12 16 10.1 11.4 5.5 9.5 10.1 7.6Z" />
+            </svg>
+          </span>
+          <h1 className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-gray-800 dark:text-gray-100 sm:text-base">
+            GPT Image Playground
+          </h1>
+        </div>
         <div className="flex flex-shrink-0 items-center gap-1.5">
           <div className="hidden rounded-full border border-gray-200/80 bg-white/90 p-0.5 shadow-[0_14px_30px_-28px_rgba(15,23,42,0.58)] dark:border-white/[0.08] dark:bg-gray-900/90 sm:inline-flex">
             <button

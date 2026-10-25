@@ -50,6 +50,7 @@ export default function ReferenceImagesSection({
   return (
     <div className="flex flex-col gap-2">
       <ReferenceImagesToolbar
+        inputCount={inputImages.length}
         atImageLimit={atImageLimit}
         showImageUrlInput={showImageUrlInput}
         imageUrlInput={imageUrlInput}
@@ -76,16 +77,19 @@ export default function ReferenceImagesSection({
           />
         </div>
       ) : (
-        <div
-          className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 text-gray-400 dark:border-white/[0.08] dark:text-gray-500 ${
-            isMobile ? 'py-3' : 'py-6'
+        <button
+          type="button"
+          onClick={onOpenFilePicker}
+          disabled={atImageLimit}
+          className={`group flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-gray-300/80 bg-gray-50/60 text-gray-400 transition-colors hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300/80 disabled:hover:bg-gray-50/60 dark:border-white/[0.08] dark:bg-white/[0.02] dark:text-gray-500 dark:hover:border-blue-400/30 dark:hover:bg-blue-500/[0.06] dark:hover:text-blue-300 ${
+            isMobile ? 'py-3' : 'py-5'
           }`}
         >
-          <svg className="mb-2 h-8 w-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="text-xs">暂无参考图</span>
-        </div>
+          <span className="text-xs">点击添加，或直接拖入图片</span>
+        </button>
       )}
 
       <ReferenceMaskNotice

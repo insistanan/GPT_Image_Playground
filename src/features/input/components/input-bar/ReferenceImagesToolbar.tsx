@@ -1,8 +1,9 @@
 import type { RefObject } from 'react'
-import { API_MAX_IMAGES } from './shared'
+import { API_MAX_IMAGES, SECTION_TITLE_CLASS } from './shared'
 import ReferenceImageUrlPopover from './ReferenceImageUrlPopover'
 
 interface ReferenceImagesToolbarProps {
+  inputCount: number
   atImageLimit: boolean
   showImageUrlInput: boolean
   imageUrlInput: string
@@ -16,6 +17,7 @@ interface ReferenceImagesToolbarProps {
 }
 
 export default function ReferenceImagesToolbar({
+  inputCount,
   atImageLimit,
   showImageUrlInput,
   imageUrlInput,
@@ -29,7 +31,14 @@ export default function ReferenceImagesToolbar({
 }: ReferenceImagesToolbarProps) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">参考图</span>
+      <div className="flex items-baseline gap-2">
+        <span className={SECTION_TITLE_CLASS}>参考图</span>
+        {inputCount > 0 && (
+          <span className="font-mono text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+            {inputCount}/{API_MAX_IMAGES}
+          </span>
+        )}
+      </div>
       <div className="relative flex gap-1">
         <button
           type="button"

@@ -1,4 +1,5 @@
 import type { KeyboardEventHandler, RefObject } from 'react'
+import { SECTION_TITLE_CLASS } from './shared'
 
 interface PromptSectionProps {
   prompt: string
@@ -20,13 +21,13 @@ export default function PromptSection({
   onKeyDown,
 }: PromptSectionProps) {
   return (
-    <div className="flex flex-shrink-0 flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">提示词</span>
-          <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{promptHintText}</p>
+    <div className="flex flex-shrink-0 flex-col gap-2">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <span className={SECTION_TITLE_CLASS}>提示词</span>
+          <p className="mt-0.5 truncate text-xs text-gray-400 dark:text-gray-500">{promptHintText}</p>
         </div>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-white/[0.05] dark:text-gray-400">
+        <span className="flex-shrink-0 font-mono text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
           {normalizedPrompt ? `${normalizedPrompt.length} 字` : '未填写'}
         </span>
       </div>
@@ -37,7 +38,7 @@ export default function PromptSection({
         onKeyDown={onKeyDown}
         rows={isMobile ? 3 : 12}
         placeholder="描述你想生成的图片..."
-        className="min-h-[4.75rem] w-full resize-none rounded-[1.35rem] border border-gray-200/70 bg-white px-4 py-3 text-[15px] leading-6 text-gray-700 shadow-sm transition-[border-color,box-shadow] duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-100 md:min-h-[11rem] md:py-3.5 md:leading-7"
+        className="min-h-[4.75rem] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50/70 px-4 py-3 text-[15px] leading-6 text-gray-800 transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-gray-400 hover:border-gray-300 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-100 dark:placeholder:text-gray-500 dark:hover:border-white/[0.14] dark:focus:bg-white/[0.05] md:min-h-[11rem] md:leading-7"
       />
     </div>
   )

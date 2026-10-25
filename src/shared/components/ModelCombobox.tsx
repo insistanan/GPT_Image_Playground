@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { useFloatingPanel } from '@/hooks/useFloatingPanel'
 
 export interface ModelOption {
   value: string
@@ -25,11 +27,18 @@ export default function ModelCombobox({
   className,
 }: ModelComboboxProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [openUp, setOpenUp] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const { style: menuStyle, placement } = useFloatingPanel({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: menuRef,
+    width: 'anchor',
+  })
 
   const filteredOptions = useMemo(() => {
     const query = value.trim().toLowerCase()
@@ -42,7 +51,8 @@ export default function ModelCombobox({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false)
       }
     }
@@ -51,14 +61,9 @@ export default function ModelCombobox({
   }, [])
 
   const openDropdown = useCallback(() => {
-    if (isOpen || !triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    const spaceAbove = rect.top
-    const spaceBelow = window.innerHeight - rect.bottom
-    const estimatedMenuHeight = Math.min(options.length * 36 + 8, 240)
-    setOpenUp(spaceAbove > spaceBelow && spaceBelow < estimatedMenuHeight)
+    if (isOpen) return
     setIsOpen(true)
-  }, [isOpen, options.length])
+  }, [isOpen])
 
   const handleFocus = useCallback(() => {
     openDropdown()
@@ -127,10 +132,14 @@ export default function ModelCombobox({
         />
       </div>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className={`absolute z-50 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/60 dark:border-white/[0.08] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] overflow-hidden py-1 max-h-60 overflow-y-auto ring-1 ring-black/5 dark:ring-white/10 ${
-            openUp ? 'bottom-full mb-1.5 animate-dropdown-up' : 'top-full mt-1.5 animate-dropdown-down'
+          ref={menuRef}
+          role="listbox"
+          style={menuStyle}
+          onClick={(e) => e.stopPropagation()}
+          className={`overflow-y-auto overscroll-contain rounded-xl border border-gray-200/60 bg-white/95 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95 dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] dark:ring-white/10 ${
+            placement === 'top' ? 'animate-dropdown-up' : 'animate-dropdown-down'
           }`}
         >
           {filteredOptions.length === 0 ? (
@@ -144,12 +153,14 @@ export default function ModelCombobox({
               return (
                 <div
                   key={option.value}
+                  role="option"
+                  aria-selected={isSelected}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     selectOption(option)
                   }}
                   onMouseEnter={() => setHighlightedIndex(index)}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 text-xs cursor-pointer transition-colors ${
+                  className={`mx-1 flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors ${
                     isHighlighted
                       ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                       : isSelected
@@ -174,7 +185,8 @@ export default function ModelCombobox({
               )
             })
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

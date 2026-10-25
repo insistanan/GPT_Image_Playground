@@ -74,7 +74,6 @@ export interface ParamsSectionViewModel {
   hasInputImages: boolean
   outputCompressionInput: string
   nInput: string
-  selectClass: string
   onActiveProviderChange: (providerId: string) => void
   onOpenSizePicker: () => void
   onSetParams: (params: Partial<TaskParams>) => void
@@ -180,9 +179,6 @@ export function useInputBarState(): InputBarViewModel {
   const promptPreview =
     normalizedPrompt.replace(/\s+/g, ' ').slice(0, 120) || '输入框已收起，点击展开继续编辑'
   const normalizedSize = resolveTaskParamSizeOrDefault(params.size)
-  const selectClass = `rounded-xl border border-gray-200/60 bg-white/50 px-3 text-[13px] transition-all duration-200 shadow-sm hover:bg-white dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06] ${
-    isMobile ? 'py-2.5' : 'py-2'
-  }`
 
   useEffect(() => {
     setOutputCompressionInput(
@@ -298,7 +294,6 @@ export function useInputBarState(): InputBarViewModel {
     hasInputImages,
     outputCompressionInput,
     nInput,
-    selectClass,
     onActiveProviderChange: setActiveProvider,
     onOpenSizePicker: () => setShowSizePicker(true),
     onSetParams: applyParamPatch,

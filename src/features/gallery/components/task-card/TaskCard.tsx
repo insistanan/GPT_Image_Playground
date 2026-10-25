@@ -109,12 +109,12 @@ function TaskCard({
       ref={cardRef}
       data-task-card-root
       data-task-id={task.id}
-      className={`group/task-card cursor-pointer overflow-hidden rounded-2xl border bg-white/[0.92] shadow-[0_16px_40px_-34px_rgba(15,23,42,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-34px_rgba(37,99,235,0.35)] dark:bg-gray-900/[0.92] ${
+      className={`group/task-card cursor-pointer overflow-hidden rounded-2xl border bg-white shadow-sm shadow-gray-900/[0.03] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-900/[0.08] dark:bg-gray-900 dark:shadow-black/20 dark:hover:shadow-black/40 ${
         selected
-          ? 'border-blue-500 ring-2 ring-blue-100 shadow-[0_18px_44px_-32px_rgba(37,99,235,0.45)] dark:ring-blue-500/20'
+          ? 'border-blue-500 ring-2 ring-blue-500/20 dark:ring-blue-400/25'
           : task.status === 'running'
             ? 'border-blue-400 generating'
-            : 'border-gray-200/90 dark:border-white/[0.08]'
+            : 'border-gray-200/80 hover:border-gray-300 dark:border-white/[0.07] dark:hover:border-white/[0.14]'
       }`}
       onClick={() => {
         if (!consumeCardClick()) return
@@ -148,7 +148,7 @@ function TaskCard({
 
         <div className="flex min-w-0 flex-1 flex-col p-3.5">
           <div className="mb-2 min-h-0 flex-1">
-            <p className="line-clamp-3 text-[14px] font-medium leading-6 text-gray-700 dark:text-gray-200">
+            <p className="line-clamp-2 text-[13px] font-medium leading-5 text-gray-800 dark:text-gray-100">
               {normalizedPrompt || (taskKind === 'image' ? '' : '(无提示词)')}
             </p>
           </div>
@@ -158,7 +158,6 @@ function TaskCard({
               isInRecycleBin={isInRecycleBin}
               isFavorite={isFavorite}
               taskKind={taskKind}
-              categoryName={categoryName}
               providerName={providerName}
               statusLabel={statusLabel}
               statusChipClass={statusChipClass}
@@ -176,6 +175,7 @@ function TaskCard({
             <TaskCardActions
               isInRecycleBin={isInRecycleBin}
               task={task}
+              categoryName={categoryName}
               canEditOutputs={canEditOutputs}
               onReuse={onReuse}
               onEditOutputs={onEditOutputs}
