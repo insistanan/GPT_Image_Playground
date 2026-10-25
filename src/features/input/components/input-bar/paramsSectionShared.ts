@@ -1,5 +1,5 @@
-import type { TaskBackground, TaskQuality } from '../../../../types'
-import { BASE_QUALITY_VALUES, GPT_IMAGE_25_QUALITY_VALUES } from '../../../../lib/capabilities'
+import type { TaskBackground, TaskQuality } from '@/types'
+import { BASE_QUALITY_VALUES, GPT_IMAGE_25_QUALITY_VALUES } from '@/lib/capabilities'
 
 export interface ProviderOption {
   label: string

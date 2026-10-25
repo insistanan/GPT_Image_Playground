@@ -3,10 +3,10 @@ import {
   runGalleryRetry,
   runGalleryReuse,
   runGalleryToggleFavorite,
-} from '../../../../store'
-import type { CategoryConfig, TaskRecord, TaskView } from '../../../../types'
-import MoveCategoryModal from '../MoveCategoryModal'
-import TaskContextMenu from '../TaskContextMenu'
+} from '@/store'
+import type { CategoryConfig, TaskRecord, TaskView } from '@/types'
+import MoveCategoryModal from '@/features/gallery/components/MoveCategoryModal'
+import TaskContextMenu from '@/features/gallery/components/TaskContextMenu'
 import SelectionBoxOverlay from './SelectionBoxOverlay'
 import type { SelectionBox, TaskContextMenuState } from './shared'
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   getTaskPartialPreviewUrl,
   subscribeTaskPartialPreviews,
-} from '../store/taskPartialPreviews'
+} from '@/store/taskPartialPreviews'
 
 export function useTaskPartialPreview(taskId: string | null | undefined): string {
   const [url, setUrl] = useState(() => (taskId ? getTaskPartialPreviewUrl(taskId) ?? '' : ''))

@@ -1,4 +1,4 @@
-import type { ApiProtocol, AppSettings } from '../../types'
+import type { ApiProtocol, AppSettings } from '@/types'
 
 export const DEFAULT_IMAGE_MODEL = 'gpt-image-2.5-sunburst'
 export const DEFAULT_CHAT_MODEL = 'gpt-6.1-sol'

@@ -1,5 +1,5 @@
-import type { AppSettings, TaskErrorDebugInfo, TaskRecord } from '../types'
-import { DEFAULT_SETTINGS } from '../types'
+import type { AppSettings, TaskErrorDebugInfo, TaskRecord } from '@/types'
+import { DEFAULT_SETTINGS } from '@/types'
 import {
   clearTaskAbortState,
   isTaskAbortRequested,
@@ -8,8 +8,8 @@ import {
 import type { TaskApiOutputImageAsset } from './taskApiRequest'
 import { callTaskImageApi } from './taskApiRequest'
 import type { StoreApiError } from './contracts'
-import { isRecord } from '../lib/guards'
-import { isUserAbortLikeError } from '../lib/api/abort'
+import { isRecord } from '@/lib/guards'
+import { isUserAbortLikeError } from '@/lib/api/abort'
 import { evictImage, storeImage } from './imageAssets'
 import { useStore } from './state'
 import { clearTaskPartialPreview, setTaskPartialPreview } from './taskPartialPreviews'

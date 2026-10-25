@@ -3,7 +3,7 @@ import {
   clearTasks as dbClearTasks,
   getAllTasks,
   putTask,
-} from '../lib/db'
+} from '@/lib/db'
 import type {
   AppSettings,
   CategoryConfig,
@@ -13,7 +13,7 @@ import type {
   ProviderConfig,
   StoredImage,
   TaskParams,
-} from '../types'
+} from '@/types'
 import type { PersistedAppStateSnapshot } from './contracts'
 import {
   getImportedCategoriesFromExport,
@@ -36,14 +36,14 @@ import { repairCategoryStateFromTasks } from './taskStoreUtils'
 import {
   getImageExtensionFromMimeType,
   getImageMimeTypeFromPath,
-} from '../lib/imageMime'
-import { isRemoteImageUrl } from '../lib/imageUrl'
+} from '@/lib/imageMime'
+import { isRemoteImageUrl } from '@/lib/imageUrl'
 import {
   clampOutputImageCount,
   isTaskBackground,
   isTaskInputFidelity,
   isTaskQuality,
-} from '../lib/capabilities'
+} from '@/lib/capabilities'
 import { DEFAULT_PARAMS, resolveTaskParamSizeOrDefault } from './taskParams'
 
 interface PreparedImportedRemoteImage {

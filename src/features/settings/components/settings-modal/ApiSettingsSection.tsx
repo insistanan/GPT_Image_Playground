@@ -2,8 +2,8 @@ import type { Dispatch, SetStateAction } from 'react'
 import type {
   AppSettings,
   ProviderConfig,
-} from '../../../../types'
-import type { DevProxyConfig } from '../../../../lib/devProxy'
+} from '@/types'
+import type { DevProxyConfig } from '@/lib/devProxy'
 import ApiModelSettings from './ApiModelSettings'
 import ApiProviderFields from './ApiProviderFields'
 import ApiRequestSettings from './ApiRequestSettings'

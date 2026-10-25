@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
-import type { TaskRecord } from '../../../types'
-import { canEditTaskOutputs, canRetryTask } from '../../../store'
+import type { TaskRecord } from '@/types'
+import { canEditTaskOutputs, canRetryTask } from '@/store'
 
 interface Props {
   task: TaskRecord | null

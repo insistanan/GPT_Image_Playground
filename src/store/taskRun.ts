@@ -1,5 +1,5 @@
-import { putTask } from '../lib/db'
-import type { TaskErrorDebugInfo, TaskRecord, TaskResponseMeta } from '../types'
+import { putTask } from '@/lib/db'
+import type { TaskErrorDebugInfo, TaskRecord, TaskResponseMeta } from '@/types'
 import { getTaskAborter, requestTaskAbort } from './taskAbort'
 import { useStore } from './state'
 import { resolveTaskAbortPlan, resolveTaskRetryPlan } from './taskRecords'

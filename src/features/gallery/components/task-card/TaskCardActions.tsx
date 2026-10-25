@@ -1,5 +1,5 @@
-import type { TaskRecord } from '../../../../types'
-import { canRetryTask, resolveTaskKind } from '../../../../store'
+import type { TaskRecord } from '@/types'
+import { canRetryTask, resolveTaskKind } from '@/store'
 
 interface TaskCardActionsProps {
   isInRecycleBin: boolean

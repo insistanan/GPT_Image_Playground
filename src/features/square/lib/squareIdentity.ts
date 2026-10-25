@@ -1,4 +1,4 @@
-import type { SquareIdentity } from '../../../types'
+import type { SquareIdentity } from '@/types'
 
 const SQUARE_IDENTITY_STORAGE_KEY = 'gpt-image-playground.square.identity.v1'
 

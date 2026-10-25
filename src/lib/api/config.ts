@@ -4,11 +4,11 @@ import type {
   ResponsesImageInputMode,
   ResponsesPromptRevisionMode,
   ResponsesTransportMode,
-} from '../../types'
+} from '@/types'
 import type { SharedRequestContext } from './types'
-import { buildApiUrl } from '../devProxy'
-import { DEFAULT_IMAGE_MODEL } from '../capabilities'
-import { IMAGE_MIME_BY_EXTENSION } from '../imageMime'
+import { buildApiUrl } from '@/lib/devProxy'
+import { DEFAULT_IMAGE_MODEL } from '@/lib/capabilities'
+import { IMAGE_MIME_BY_EXTENSION } from '@/lib/imageMime'
 
 const RESPONSES_PROMPT_REVISION_COMPAT_PREFIX = [
   '兼容模式要求：不要改写、重排、总结、翻译、润色或省略下面的“原始提示词”内容。',

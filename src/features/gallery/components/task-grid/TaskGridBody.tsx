@@ -1,13 +1,13 @@
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react'
-import { resolveTaskCategoryName, resolveTaskProviderName } from '../../../../store'
+import { resolveTaskCategoryName, resolveTaskProviderName } from '@/store'
 import {
   ALL_CATEGORY_FILTER,
   type CategoryConfig,
   type ProviderConfig,
   type TaskRecord,
   type TaskView,
-} from '../../../../types'
-import TaskCard from '../task-card/TaskCard'
+} from '@/types'
+import TaskCard from '@/features/gallery/components/task-card/TaskCard'
 import { useVirtualTaskGrid } from './useVirtualTaskGrid'
 
 interface TaskGridBodyProps {

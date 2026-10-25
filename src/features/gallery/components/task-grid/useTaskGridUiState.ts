@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ALL_CATEGORY_FILTER, UNCATEGORIZED_CATEGORY_FILTER, type CategoryConfig, type TaskRecord } from '../../../../types'
+import { ALL_CATEGORY_FILTER, UNCATEGORIZED_CATEGORY_FILTER, type CategoryConfig, type TaskRecord } from '@/types'
 import type { TaskContextMenuState } from './shared'
 
 interface UseTaskGridUiStateOptions {

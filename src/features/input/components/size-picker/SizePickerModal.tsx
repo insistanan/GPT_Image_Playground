@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { calculateImageSize, isExperimentalImageSize, normalizeImageSize, parseRatio, type SizeTier } from '../../../../lib/size'
+import { calculateImageSize, isExperimentalImageSize, normalizeImageSize, parseRatio, type SizeTier } from '@/lib/size'
 import SizePickerAutoPanel from './SizePickerAutoPanel'
 import SizePickerRatioPanel from './SizePickerRatioPanel'
 import SizePickerResolutionPanel from './SizePickerResolutionPanel'

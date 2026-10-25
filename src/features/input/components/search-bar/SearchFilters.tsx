@@ -1,5 +1,5 @@
-import type { TaskView } from '../../../../types'
-import Select from '../../../../shared/components/Select'
+import type { TaskView } from '@/types'
+import Select from '@/shared/components/Select'
 import { FILTER_STATUS_OPTIONS, type SearchFilterStatus } from './shared'
 
 interface SearchFiltersProps {

@@ -1,4 +1,4 @@
-import type { AppView } from '../../types'
+import type { AppView } from '@/types'
 
 export function createViewerSlice(set: any) {
   return {

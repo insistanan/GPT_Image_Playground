@@ -4,10 +4,10 @@ import type {
   StoredLegacyDataUrlImage,
   StoredLocalBlobImage,
   StoredRemoteUrlImage,
-} from '../../types'
-import { isRecord } from '../guards'
-import { buildImageThumbnail } from '../imagePreview'
-import { isRemoteImageUrl } from '../imageUrl'
+} from '@/types'
+import { isRecord } from '@/lib/guards'
+import { buildImageThumbnail } from '@/lib/imagePreview'
+import { isRemoteImageUrl } from '@/lib/imageUrl'
 import { STORE_IMAGES, STORE_TASKS, IMAGE_INDEX_KIND, IMAGE_INDEX_CONTENT_HASH, IMAGE_INDEX_CREATED_AT, openDB, dbTransaction } from './schema'
 export type LegacyCompatibleStoredImage =
   | StoredLegacyDataUrlImage

@@ -1,8 +1,8 @@
-import type { ImageEditSelection } from '../../types'
+import type { ImageEditSelection } from '@/types'
 import { MIME_MAP } from './config'
 import { throwIfSignalAborted, abortAwareFetch } from './abort'
-import { getImageExtensionFromMimeType } from '../imageMime'
-import { isRemoteImageUrl } from '../imageUrl'
+import { getImageExtensionFromMimeType } from '@/lib/imageMime'
+import { isRemoteImageUrl } from '@/lib/imageUrl'
 import { fetchRemoteImageBlob } from './imageDownload'
 import type {
   ApiImageAsset,

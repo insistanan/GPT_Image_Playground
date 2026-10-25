@@ -1,4 +1,4 @@
-import type { TaskRecord } from "../types"
+import type { TaskRecord } from "@/types"
 import { prepareCurrentTaskDraft } from "./taskDraftBuilder"
 import { findProviderById, getProviderSettings } from "./domain"
 import { useStore } from "./state"

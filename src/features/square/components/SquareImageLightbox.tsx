@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
-import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
-import LightboxViewport from '../../viewer/components/lightbox/LightboxViewport'
-import { useLightboxTransform } from '../../viewer/components/lightbox/useLightboxTransform'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
+import LightboxViewport from '@/features/viewer/components/lightbox/LightboxViewport'
+import { useLightboxTransform } from '@/features/viewer/components/lightbox/useLightboxTransform'
 
 export interface SquareLightboxImage {
   src: string

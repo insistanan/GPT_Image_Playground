@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ImageEditSelection, ImageEditSession } from '../../../../types'
+import type { ImageEditSelection, ImageEditSession } from '@/types'
 import { createEmptyDisplayRect, type ImageDisplayRect, type ImageNaturalSize } from './shared'
-import { useImageAssetView } from '../../../../hooks/useImageAssetView'
+import { useImageAssetView } from '@/hooks/useImageAssetView'
 
 export function useImageEditState(imageEditSession: ImageEditSession | null, activeProviderId: string) {
   const [promptDraft, setPromptDraft] = useState('')

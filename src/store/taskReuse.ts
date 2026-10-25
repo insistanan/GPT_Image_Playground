@@ -1,4 +1,4 @@
-import type { InputImage, TaskRecord } from '../types'
+import type { InputImage, TaskRecord } from '@/types'
 import { getImageView } from './imageAssets'
 import { resolveTaskKind } from './taskRecords'
 

@@ -5,7 +5,7 @@ import type {
   SquareMySharesInput,
   SquareShareDetail,
   SquareShareSummary,
-} from '../../../types'
+} from '@/types'
 import { readSquareIdentity, saveSquareIdentity } from './squareIdentity'
 
 export interface SquareCreateShareAssetInput {

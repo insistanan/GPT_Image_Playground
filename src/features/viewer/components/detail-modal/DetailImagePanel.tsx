@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
-import type { TaskRecord } from '../../../../types'
-import { isTaskRunExceptional, resolveTaskRunOutcome } from '../../../../store'
+import type { TaskRecord } from '@/types'
+import { isTaskRunExceptional, resolveTaskRunOutcome } from '@/store'
 import ErrorSourceUrlLink from './ErrorSourceUrlLink'
 import { resolveTaskErrorSourceUrl } from './shared'
 

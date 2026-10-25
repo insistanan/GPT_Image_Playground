@@ -2,11 +2,11 @@ import type { MouseEvent as ReactMouseEvent } from 'react'
 import {
   resolveTaskImageProgress,
   resolveTaskStatusLabel,
-} from '../../../../store'
-import type { TaskRecord } from '../../../../types'
-import TaskCardPreviewActionButtons from '../task-card/TaskCardPreviewActionButtons'
-import TaskCardPreviewStatusLayer from '../task-card/TaskCardPreviewStatusLayer'
-import { useTaskCardState } from '../task-card/useTaskCardState'
+} from '@/store'
+import type { TaskRecord } from '@/types'
+import TaskCardPreviewActionButtons from '@/features/gallery/components/task-card/TaskCardPreviewActionButtons'
+import TaskCardPreviewStatusLayer from '@/features/gallery/components/task-card/TaskCardPreviewStatusLayer'
+import { useTaskCardState } from '@/features/gallery/components/task-card/useTaskCardState'
 
 interface GalleryImageTileProps {
   task: TaskRecord

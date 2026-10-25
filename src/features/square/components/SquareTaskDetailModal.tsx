@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
-import type { SquareShareAssetSummary, SquareShareDetail, TaskParams, TaskRecord } from '../../../types'
-import { resolveSquareAssetUrl, summarizeSquareShare } from '../lib/squareApiClient'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
+import type { SquareShareAssetSummary, SquareShareDetail, TaskParams, TaskRecord } from '@/types'
+import { resolveSquareAssetUrl, summarizeSquareShare } from '@/features/square/lib/squareApiClient'
 
 interface SquareTaskNode {
   localTaskId: string

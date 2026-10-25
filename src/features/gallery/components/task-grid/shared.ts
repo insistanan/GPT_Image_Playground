@@ -1,4 +1,4 @@
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 
 export const BOX_SELECT_THRESHOLD = 6
 export const TASK_CARD_HEIGHT = 162

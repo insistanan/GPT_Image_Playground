@@ -1,4 +1,4 @@
-import * as imageDb from '../lib/db'
+import * as imageDb from '@/lib/db'
 
 export type CachedImageVariant = 'original' | 'thumbnail'
 

@@ -4,7 +4,7 @@ import {
   getNextProviderName,
   getProviderSettings,
   normalizeProviderList,
-} from "../domain"
+} from "@/store/domain"
 
 export function createProviderSlice(set: any) {
   return {

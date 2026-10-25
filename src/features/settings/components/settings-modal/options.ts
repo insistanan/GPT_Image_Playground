@@ -4,7 +4,7 @@ import type {
   ResponsesImageInputMode,
   ResponsesPromptRevisionMode,
   ResponsesTransportMode,
-} from '../../../../types'
+} from '@/types'
 
 export const API_PROTOCOL_OPTIONS: Array<{ label: string; value: ApiProtocol }> = [
   { label: 'Images API', value: 'images' },

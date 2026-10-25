@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 
-import { getImageView } from '../../../../store'
+import { getImageView } from '@/store'
 
-import { formatImageRatio } from '../../../../lib/size'
+import { formatImageRatio } from '@/lib/size'
 
-import { useImageAssetView } from '../../../../hooks/useImageAssetView'
+import { useImageAssetView } from '@/hooks/useImageAssetView'
 
 
 

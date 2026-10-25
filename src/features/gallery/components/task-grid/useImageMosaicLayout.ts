@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useState, type RefObject } from 'react'
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 import {
   resolveTaskMosaicDimensions,
   resolveTaskMosaicSeed,

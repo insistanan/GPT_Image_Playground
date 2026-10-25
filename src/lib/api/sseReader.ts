@@ -1,4 +1,4 @@
-import { isRecord } from '../guards'
+import { isRecord } from '@/lib/guards'
 import { sanitizeDebugValue, attachDebugResponseMeta } from './debug'
 import { extractErrorMessage } from './errors'
 import {

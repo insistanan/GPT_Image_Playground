@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type ClipboardEvent, type KeyboardEvent } from 'react'
-import { useCloseOnEscape } from '../../../hooks/useCloseOnEscape'
-import { useStore } from '../../../store'
-import { buildPromptShareInput, buildTaskShareInput } from '../lib/buildShareManifest'
-import { isSquareApiConfigured, squareApiClient } from '../lib/squareApiClient'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
+import { useStore } from '@/store'
+import { buildPromptShareInput, buildTaskShareInput } from '@/features/square/lib/buildShareManifest'
+import { isSquareApiConfigured, squareApiClient } from '@/features/square/lib/squareApiClient'
 
 const MAX_TAG_COUNT = 8
 const MAX_TAG_LENGTH = 24

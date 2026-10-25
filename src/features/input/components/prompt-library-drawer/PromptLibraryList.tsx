@@ -1,4 +1,4 @@
-import type { PromptLibraryItem } from '../../../../types'
+import type { PromptLibraryItem } from '@/types'
 import { formatPromptTimestamp } from './shared'
 
 interface PromptLibraryListProps {

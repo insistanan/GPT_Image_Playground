@@ -2,6 +2,7 @@
 import { readFileSync } from 'fs'
 import { appendFile, mkdir } from 'fs/promises'
 import type { IncomingMessage, ServerResponse } from 'http'
+import { fileURLToPath, URL } from 'node:url'
 import { resolve } from 'path'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
@@ -317,6 +318,11 @@ export default defineConfig(({ command }) => {
   const devProxyConfig = command === 'serve' ? loadDevProxyConfig() : null
 
   return {
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
     plugins: [
       react(),
       {

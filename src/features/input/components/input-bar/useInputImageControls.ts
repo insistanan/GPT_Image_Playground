@@ -13,8 +13,8 @@ import {
   clearInputImageEdit,
   reopenImageEditorFromInputImage,
   useStore,
-} from '../../../../store'
-import type { InputImage } from '../../../../types'
+} from '@/store'
+import type { InputImage } from '@/types'
 import { API_MAX_IMAGES } from './shared'
 import type { InputPanelBindings, ReferenceImagesSectionViewModel } from './useInputBarState'
 

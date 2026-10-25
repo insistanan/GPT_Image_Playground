@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type Dispatch, type PointerEvent as ReactPointerEvent, type RefObject, type SetStateAction } from 'react'
-import type { ImageEditSelection } from '../../../../types'
+import type { ImageEditSelection } from '@/types'
 import {
   clamp,
   isPointInsideSelection,

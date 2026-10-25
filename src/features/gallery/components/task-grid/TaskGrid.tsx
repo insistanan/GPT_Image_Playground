@@ -6,7 +6,7 @@ import {
   runGalleryReuse,
   runGalleryToggleFavorite,
   useStore,
-} from '../../../../store'
+} from '@/store'
 import SelectionToolbar from './SelectionToolbar'
 import TaskGridBody from './TaskGridBody'
 import TaskGridImageMode from './TaskGridImageMode'

@@ -1,5 +1,5 @@
 import type { CSSProperties, PointerEventHandler, RefObject } from 'react'
-import type { ImageEditSelection } from '../../../../types'
+import type { ImageEditSelection } from '@/types'
 import type { ImageDisplayRect, ImageSelectionPixelInfo } from './shared'
 
 interface ImageEditCanvasPanelProps {

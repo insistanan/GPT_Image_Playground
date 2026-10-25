@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { ImageAssetView, ImageAssetViewOptions } from '../store/imageAssets'
-import { getImageView } from '../store'
+import type { ImageAssetView, ImageAssetViewOptions } from '@/store/imageAssets'
+import { getImageView } from '@/store'
 
 export interface UseImageAssetViewResult {
   imageId: string

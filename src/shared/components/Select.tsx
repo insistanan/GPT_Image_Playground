@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 interface Option {
   label: string
   value: string | number
+  disabled?: boolean
 }
 
 interface SelectProps {

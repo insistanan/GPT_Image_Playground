@@ -11,8 +11,8 @@ import {
   runGalleryBatchFavorite,
   runGalleryBatchMoveToCategory,
   runGalleryMoveTaskToCategory,
-} from '../../../../store'
-import type { TaskRecord } from '../../../../types'
+} from '@/store'
+import type { TaskRecord } from '@/types'
 import type { TaskContextMenuState } from './shared'
 
 interface UseTaskGridActionsOptions {

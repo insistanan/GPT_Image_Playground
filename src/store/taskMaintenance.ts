@@ -1,5 +1,5 @@
-import { getAllTasks, putTask } from '../lib/db'
-import type { TaskRecord } from '../types'
+import { getAllTasks, putTask } from '@/lib/db'
+import type { TaskRecord } from '@/types'
 import {
   ERROR_LOG_POLL_INTERVAL_MS,
   ERROR_LOG_RETENTION_MS,

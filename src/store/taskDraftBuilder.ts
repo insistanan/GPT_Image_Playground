@@ -1,5 +1,5 @@
-import { getChangedParams, normalizeParamsForSettings } from '../lib/capabilities'
-import { normalizeImageSize } from '../lib/size'
+import { getChangedParams, normalizeParamsForSettings } from '@/lib/capabilities'
+import { normalizeImageSize } from '@/lib/size'
 import type {
   AppSettings,
   CategoryConfig,
@@ -9,13 +9,13 @@ import type {
   ProviderConfig,
   TaskParams,
   TaskRecord,
-} from '../types'
+} from '@/types'
 import {
   ALL_CATEGORY_FILTER,
   FAVORITES_CATEGORY_FILTER,
   UNCATEGORIZED_CATEGORY_FILTER,
   UNKNOWN_TASK_PROVIDER_NAME,
-} from '../types'
+} from '@/types'
 import { findCategoryById, findProviderById, getProviderSettings } from './domain'
 import { resolveTaskParentFromInputImages } from './taskLineage'
 import { stageTaskDraftAssets } from './taskDraftAssets'

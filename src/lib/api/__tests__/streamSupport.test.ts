@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { AppSettings } from '../../../types'
+import type { AppSettings } from '@/types'
 import {
   buildStreamSupportKey,
   isStreamKnownUnsupported,
   isStreamUnsupportedError,
   markStreamUnsupported,
   resetStreamSupportCache,
-} from '../streamSupport'
+} from '@/lib/api/streamSupport'
 
 function fakeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {

@@ -10,9 +10,9 @@ import {
 
   useStore,
 
-} from '../../../../store'
+} from '@/store'
 
-import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
 
 import ImageEditCanvasPanel from './ImageEditCanvasPanel'
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { buildProxiedImageUrl, fetchRemoteImageBlob, isImageUrlDownloadError } from "../imageDownload"
-import { shouldRetryImagesPlan, shouldRetryResponsesWithCompatibility } from "../requestPlanner"
+import { buildProxiedImageUrl, fetchRemoteImageBlob, isImageUrlDownloadError } from "@/lib/api/imageDownload"
+import { shouldRetryImagesPlan, shouldRetryResponsesWithCompatibility } from "@/lib/api/requestPlanner"
 
 const proxyConfig = { enabled: true, prefix: "/api-proxy" }
 

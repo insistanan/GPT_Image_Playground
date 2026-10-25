@@ -11,7 +11,7 @@ import type {
   TaskParams,
   TaskRecord,
   TaskView,
-} from '../types'
+} from '@/types'
 
 export interface AppState {
   appView: AppView

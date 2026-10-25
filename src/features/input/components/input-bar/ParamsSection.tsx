@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import type { TaskBackground, TaskInputFidelity, TaskParams } from '../../../../types'
-import { MAX_OPENAI_OUTPUT_IMAGES } from '../../../../lib/capabilities'
-import Select from '../../../../shared/components/Select'
+import type { TaskBackground, TaskInputFidelity, TaskParams } from '@/types'
+import { MAX_OPENAI_OUTPUT_IMAGES } from '@/lib/capabilities'
+import Select from '@/shared/components/Select'
 import ParamPopoverChip, {
   CHIP_ACTIVE_CLASS,
   CHIP_BASE_CLASS,
   CHIP_IDLE_CLASS,
-} from '../../../../shared/components/ParamPopoverChip'
+} from '@/shared/components/ParamPopoverChip'
 import {
   BACKGROUND_OPTIONS,
   INPUT_FIDELITY_OPTIONS,

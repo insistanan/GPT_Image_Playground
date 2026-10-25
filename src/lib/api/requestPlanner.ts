@@ -1,4 +1,4 @@
-import type { ApiProtocol, AppliedTransportMeta, AppSettings, TaskResponseMeta } from '../../types'
+import type { ApiProtocol, AppliedTransportMeta, AppSettings, TaskResponseMeta } from '@/types'
 import { getResponsesTransportMode } from './config'
 import { isImageUrlDownloadError } from './imageDownload'
 import {

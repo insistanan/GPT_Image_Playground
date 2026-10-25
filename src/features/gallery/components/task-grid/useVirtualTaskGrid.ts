@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useState, type RefObject } from 'react'
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 import { TASK_CARD_HEIGHT, TASK_GRID_GAP, TASK_GRID_OVERSCAN_ROWS } from './shared'
 
 interface UseVirtualTaskGridOptions {

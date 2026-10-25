@@ -1,5 +1,5 @@
-import { DEFAULT_STREAM_PARTIAL_IMAGES } from '../capabilities'
-import type { TaskParams } from '../../types'
+import { DEFAULT_STREAM_PARTIAL_IMAGES } from '@/lib/capabilities'
+import type { TaskParams } from '@/types'
 
 export function appendSharedImageParams(
   target: Record<string, unknown> | FormData,
@@ -10,9 +10,8 @@ export function appendSharedImageParams(
     includeN?: boolean
   } = {},
 ) {
-  const isFormData = typeof FormData !== 'undefined' && target instanceof FormData
   const set = (key: string, value: string | number | boolean) => {
-    if (isFormData) {
+    if (target instanceof FormData) {
       target.append(key, String(value))
       return
     }

@@ -5,8 +5,8 @@ import type {
   TaskErrorDebugInfo,
   TaskParams,
   TaskResponseMeta,
-} from '../../types'
-import type { readClientDevProxyConfig } from '../devProxy'
+} from '@/types'
+import type { readClientDevProxyConfig } from '@/lib/devProxy'
 
 export interface CallImageApiIntent {
   settings: AppSettings

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest"
 // or test the individual components from payloadFacts.
 import {
   buildCompactResponsesPayload,
-} from "../payloadFacts"
+} from "@/lib/api/payloadFacts"
 
 // Simulate what readResponsesPayloadStream does internally for response.completed events
 // to verify the payload reconstruction chain preserves output.

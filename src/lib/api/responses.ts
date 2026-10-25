@@ -1,4 +1,4 @@
-import type { AppliedTransportMeta, TaskResponseMeta } from '../../types'
+import type { AppliedTransportMeta, TaskResponseMeta } from '@/types'
 
 import { abortAwareFetch } from './abort'
 
@@ -78,11 +78,11 @@ function withRequestScopedPartialHandler(
 }
 
 function mergeTransportMeta(
-  current: AppliedTransportMeta | undefined,
-  next: AppliedTransportMeta | undefined,
+  current: AppliedTransportMeta | null | undefined,
+  next: AppliedTransportMeta | null | undefined,
 ): AppliedTransportMeta | undefined {
   if (!current) {
-    return next
+    return next ?? undefined
   }
   if (!next) {
     return current

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PARAMS } from '../../../store/taskParams'
-import { DEFAULT_SETTINGS } from '../../../types'
-import { clampOutputImageCount, getImageModelCapabilities, normalizeParamsForSettings } from '../paramCompatibility'
+import { DEFAULT_PARAMS } from '@/store/taskParams'
+import { DEFAULT_SETTINGS } from '@/types'
+import { clampOutputImageCount, getImageModelCapabilities, normalizeParamsForSettings } from '@/lib/capabilities/paramCompatibility'
 
 describe('paramCompatibility', () => {
   it('clamps n to 10', () => {

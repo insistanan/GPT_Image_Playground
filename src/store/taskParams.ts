@@ -1,5 +1,5 @@
-import { normalizeImageSize } from '../lib/size'
-import type { TaskParams } from '../types'
+import { normalizeImageSize } from '@/lib/size'
+import type { TaskParams } from '@/types'
 
 export const DEFAULT_PARAMS: TaskParams = {
   size: 'auto',

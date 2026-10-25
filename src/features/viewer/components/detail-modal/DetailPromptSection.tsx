@@ -1,4 +1,4 @@
-import type { TaskKind } from '../../../../types'
+import type { TaskKind } from '@/types'
 
 interface DetailPromptSectionProps {
   taskKind: TaskKind

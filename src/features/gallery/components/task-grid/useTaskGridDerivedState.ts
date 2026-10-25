@@ -3,7 +3,7 @@ import {
   isTaskInRecycleBin,
   resolveTaskCategoryName,
   resolveTaskProviderName,
-} from '../../../../store'
+} from '@/store'
 import {
   ALL_CATEGORY_FILTER,
   FAVORITES_CATEGORY_FILTER,
@@ -13,7 +13,7 @@ import {
   type TaskRecord,
   type TaskStatus,
   resolveCategoryFilterName,
-} from '../../../../types'
+} from '@/types'
 import type { CategoryOption } from './shared'
 
 interface UseTaskGridDerivedStateOptions {

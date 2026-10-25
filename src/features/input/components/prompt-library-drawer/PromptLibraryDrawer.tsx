@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
-import { useStore } from '../../../../store'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
+import { useStore } from '@/store'
 import PromptLibraryHeader from './PromptLibraryHeader'
 import PromptLibraryList from './PromptLibraryList'
 import PromptLibrarySaveForm from './PromptLibrarySaveForm'

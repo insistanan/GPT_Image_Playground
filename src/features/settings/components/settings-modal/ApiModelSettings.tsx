@@ -1,12 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { AppSettings } from '../../../../types'
-import ModelCombobox, { type ModelOption } from '../../../../shared/components/ModelCombobox'
+import type { AppSettings } from '@/types'
+import ModelCombobox, { type ModelOption } from '@/shared/components/ModelCombobox'
 import { fieldClassName } from './apiSettingsShared'
 import {
   CHAT_MODEL_OPTIONS,
   IMAGE_MODEL_OPTIONS,
   type CatalogModelOption,
-} from '../../../../lib/capabilities'
+} from '@/lib/capabilities'
 
 interface ApiModelSettingsProps {
   draft: AppSettings

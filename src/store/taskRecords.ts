@@ -8,7 +8,7 @@ import type {
   TaskKind,
   TaskParams,
   TaskRecord,
-} from '../types'
+} from '@/types'
 import {
   UNCATEGORIZED_CATEGORY_NAME,
   UNKNOWN_TASK_PROVIDER_NAME,

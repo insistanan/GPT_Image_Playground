@@ -8,20 +8,20 @@ import {
   type KeyboardEventHandler,
   type RefObject,
 } from 'react'
-import { DEFAULT_PARAMS, openLightbox, resolveTaskParamSizeOrDefault, useStore, submitTask } from '../../../../store'
+import { DEFAULT_PARAMS, openLightbox, resolveTaskParamSizeOrDefault, useStore, submitTask } from '@/store'
 import {
   ALL_CATEGORY_FILTER,
   FAVORITES_CATEGORY_FILTER,
   resolveCategoryFilterName,
   type InputImage,
   type TaskParams,
-} from '../../../../types'
+} from '@/types'
 import {
   getChangedParams,
   getImageGenerationModel,
   getImageModelCapabilities,
   normalizeParamsForSettings,
-} from '../../../../lib/capabilities'
+} from '@/lib/capabilities'
 import { API_MAX_IMAGES } from './shared'
 import { getQualityOptions } from './paramsSectionShared'
 import { useInputImageControls } from './useInputImageControls'

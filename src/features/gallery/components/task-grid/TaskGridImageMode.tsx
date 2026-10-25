@@ -3,7 +3,7 @@ import {
   ALL_CATEGORY_FILTER,
   type TaskRecord,
   type TaskView,
-} from '../../../../types'
+} from '@/types'
 import GalleryImageTile from './GalleryImageTile'
 import MosaicDecorativeTile from './MosaicDecorativeTile'
 import { useImageMosaicLayout } from './useImageMosaicLayout'

@@ -3,8 +3,8 @@ import type {
   ResponsesImageInputMode,
   ResponsesPromptRevisionMode,
   ResponsesTransportMode,
-} from '../../../../types'
-import Select from '../../../../shared/components/Select'
+} from '@/types'
+import Select from '@/shared/components/Select'
 import {
   RESPONSES_IMAGE_INPUT_MODE_OPTIONS,
   RESPONSES_PROMPT_REVISION_MODE_OPTIONS,

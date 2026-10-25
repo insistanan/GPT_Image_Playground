@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { closeLightbox, openLightbox, useStore } from '../../../../store'
-import { useImageAssetView } from '../../../../hooks/useImageAssetView'
+import { closeLightbox, openLightbox, useStore } from '@/store'
+import { useImageAssetView } from '@/hooks/useImageAssetView'
 
 export function useLightboxState() {
   const lightboxImageId = useStore((state) => state.lightboxImageId)

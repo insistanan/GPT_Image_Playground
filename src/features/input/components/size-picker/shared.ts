@@ -1,4 +1,4 @@
-import { calculateImageSize, isExperimentalImageSize, normalizeImageSize, type SizeTier } from '../../../../lib/size'
+import { calculateImageSize, isExperimentalImageSize, normalizeImageSize, type SizeTier } from '@/lib/size'
 
 export const TIERS: SizeTier[] = ['1K', '2K', '4K']
 

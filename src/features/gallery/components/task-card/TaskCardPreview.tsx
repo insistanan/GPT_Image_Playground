@@ -1,4 +1,4 @@
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 import TaskCardPreviewActionButtons from './TaskCardPreviewActionButtons'
 import TaskCardPreviewStatusLayer from './TaskCardPreviewStatusLayer'
 

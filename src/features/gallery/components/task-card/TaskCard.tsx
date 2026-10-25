@@ -9,7 +9,7 @@ import {
   resolveTaskTransportMeta,
   resolveTaskRunOutcome,
   resolveTaskStatusLabel,
-} from '../../../../store'
+} from '@/store'
 import TaskCardActions from './TaskCardActions'
 import TaskCardMetaChips from './TaskCardMetaChips'
 import TaskCardPreview from './TaskCardPreview'

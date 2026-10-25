@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type UIEventHandler } from 'react'
-import type { TaskView } from '../../../../types'
+import type { TaskView } from '@/types'
 import {
   CATEGORY_LOOP_MAX_SCROLL_RATIO,
   CATEGORY_LOOP_MIN_SCROLL_RATIO,

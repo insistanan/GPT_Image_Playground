@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type TouchEventHandler } from 'react'
-import type { TaskRecord } from '../../../../types'
-import { formatImageRatio } from '../../../../lib/size'
+import type { TaskRecord } from '@/types'
+import { formatImageRatio } from '@/lib/size'
 import { TOUCH_ACTION_REVEAL_DELAY } from './shared'
-import { useImageAssetView } from '../../../../hooks/useImageAssetView'
-import { useNearViewport } from '../../../../hooks/useNearViewport'
-import { useTaskPartialPreview } from '../../../../hooks/useTaskPartialPreview'
+import { useImageAssetView } from '@/hooks/useImageAssetView'
+import { useNearViewport } from '@/hooks/useNearViewport'
+import { useTaskPartialPreview } from '@/hooks/useTaskPartialPreview'
 
 interface UseTaskCardStateOptions {
   preferredImageVariant?: 'thumbnail' | 'original'

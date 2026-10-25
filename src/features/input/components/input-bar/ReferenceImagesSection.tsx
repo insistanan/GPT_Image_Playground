@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { InputImage } from '../../../../types'
+import type { InputImage } from '@/types'
 import ReferenceImageThumbGrid from './ReferenceImageThumbGrid'
 import ReferenceImagesToolbar from './ReferenceImagesToolbar'
 import ReferenceMaskNotice from './ReferenceMaskNotice'

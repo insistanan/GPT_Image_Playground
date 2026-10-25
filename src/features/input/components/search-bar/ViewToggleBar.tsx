@@ -1,4 +1,4 @@
-import type { GalleryDisplayMode, TaskView } from '../../../../types'
+import type { GalleryDisplayMode, TaskView } from '@/types'
 import { ACTION_BUTTON_CLASS, SEGMENTED_BUTTON_CLASS } from './shared'
 
 interface ViewToggleBarProps {

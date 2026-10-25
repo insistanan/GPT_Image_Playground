@@ -5,7 +5,7 @@ import {
   type ClipboardEventHandler,
   type DragEventHandler,
 } from 'react'
-import { createSingleImageTasksFromFiles } from '../../../../store'
+import { createSingleImageTasksFromFiles } from '@/store'
 
 function extractClipboardImageFiles(event: ClipboardEvent<HTMLDivElement>): File[] {
   const items = event.clipboardData?.items

@@ -1,6 +1,6 @@
-import { callImageApi } from '../lib/api'
-import type { ApiInputImage, ApiImageAsset, ApiPartialImage, CallApiResult } from '../lib/api'
-import type { AppSettings, TaskRecord } from '../types'
+import { callImageApi } from '@/lib/api'
+import type { ApiInputImage, ApiImageAsset, ApiPartialImage, CallApiResult } from '@/lib/api'
+import type { AppSettings, TaskRecord } from '@/types'
 import { getImageView } from './imageAssets'
 
 export type TaskApiOutputImageAsset = ApiImageAsset

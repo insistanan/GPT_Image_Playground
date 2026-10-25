@@ -1,4 +1,4 @@
-import { isRecord } from '../guards'
+import { isRecord } from '@/lib/guards'
 import { isDataUrl, isHttpUrl } from './imageTransforms'
 
 export interface ResponseImageGenerationCallMeta {

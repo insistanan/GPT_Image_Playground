@@ -1,4 +1,4 @@
-import type { ImageEditSelection } from '../../../../types'
+import type { ImageEditSelection } from '@/types'
 
 export interface ImageDisplayRect {
   left: number

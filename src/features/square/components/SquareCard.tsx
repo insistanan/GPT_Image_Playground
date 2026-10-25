@@ -1,5 +1,5 @@
-import type { SquareShareSummary } from '../../../types'
-import { resolveSquareAssetUrl, summarizeSquareShare } from '../lib/squareApiClient'
+import type { SquareShareSummary } from '@/types'
+import { resolveSquareAssetUrl, summarizeSquareShare } from '@/features/square/lib/squareApiClient'
 
 interface SquareCardProps {
   item: SquareShareSummary

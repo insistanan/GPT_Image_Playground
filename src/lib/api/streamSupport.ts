@@ -1,4 +1,4 @@
-import type { ApiProtocol, AppSettings } from '../../types'
+import type { ApiProtocol, AppSettings } from '@/types'
 
 /**
  * 会话级流式能力记忆。

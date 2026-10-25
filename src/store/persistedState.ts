@@ -1,5 +1,5 @@
-import { normalizeParamsForSettings } from '../lib/capabilities'
-import type { AppView, GalleryDisplayMode } from '../types'
+import { normalizeParamsForSettings } from '@/lib/capabilities'
+import type { AppView, GalleryDisplayMode } from '@/types'
 import type { AppState, PersistedAppStateSnapshot } from './contracts'
 import { DEFAULT_PARAMS } from './taskParams'
 import {

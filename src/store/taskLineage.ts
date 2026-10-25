@@ -1,4 +1,4 @@
-import type { InputImage, TaskRecord } from '../types'
+import type { InputImage, TaskRecord } from '@/types'
 
 export interface TaskLineageItem {
   task: TaskRecord | null

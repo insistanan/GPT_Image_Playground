@@ -1,4 +1,4 @@
-import type { TaskView } from '../../../../types'
+import type { TaskView } from '@/types'
 import { resolveFilterStatusLabel, type SearchFilterStatus } from './shared'
 
 interface MobileControlsSummaryProps {

@@ -1,4 +1,4 @@
-import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
 import LightboxViewport from './LightboxViewport'
 import { useLightboxState } from './useLightboxState'
 import { useLightboxTransform } from './useLightboxTransform'

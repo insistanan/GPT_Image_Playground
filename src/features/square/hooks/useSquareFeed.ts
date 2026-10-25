@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { SquareShareKind, SquareShareSummary } from '../../../types'
-import { isSquareApiConfigured, squareApiClient } from '../lib/squareApiClient'
+import type { SquareShareKind, SquareShareSummary } from '@/types'
+import { isSquareApiConfigured, squareApiClient } from '@/features/square/lib/squareApiClient'
 
 export type SquareFeedKind = SquareShareKind | 'mine'
 

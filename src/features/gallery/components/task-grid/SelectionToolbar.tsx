@@ -1,5 +1,5 @@
-import Select from '../../../../shared/components/Select'
-import type { TaskView } from '../../../../types'
+import Select from '@/shared/components/Select'
+import type { TaskView } from '@/types'
 import type { CategoryOption } from './shared'
 
 interface SelectionToolbarProps {

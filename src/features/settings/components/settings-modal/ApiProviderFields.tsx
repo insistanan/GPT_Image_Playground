@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { ProviderConfig } from '../../../../types'
-import Select from '../../../../shared/components/Select'
+import type { ProviderConfig } from '@/types'
+import Select from '@/shared/components/Select'
 import { fieldClassName } from './apiSettingsShared'
 
 interface ApiProviderFieldsProps {

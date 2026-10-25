@@ -1,6 +1,6 @@
-import { parseRatio } from '../../../../lib/size'
-import { getImageView, resolveTaskAppliedImageParam } from '../../../../store'
-import type { TaskRecord } from '../../../../types'
+import { parseRatio } from '@/lib/size'
+import { getImageView, resolveTaskAppliedImageParam } from '@/store'
+import type { TaskRecord } from '@/types'
 
 export interface TaskMosaicDimensions {
   width: number

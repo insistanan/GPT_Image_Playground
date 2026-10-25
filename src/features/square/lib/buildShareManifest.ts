@@ -1,8 +1,8 @@
-import { getImageRecord } from '../../../lib/db'
-import { buildImageThumbnail } from '../../../lib/imagePreview'
-import type { PromptLibraryItem, StoredImage, TaskParams, TaskRecord } from '../../../types'
-import { isTaskInRecycleBin, resolveTaskKind } from '../../../store/taskRecords'
-import { buildTaskLineage } from '../../../store/taskLineage'
+import { getImageRecord } from '@/lib/db'
+import { buildImageThumbnail } from '@/lib/imagePreview'
+import type { PromptLibraryItem, StoredImage, TaskParams, TaskRecord } from '@/types'
+import { isTaskInRecycleBin, resolveTaskKind } from '@/store/taskRecords'
+import { buildTaskLineage } from '@/store/taskLineage'
 import type { SquareCreateShareAssetInput, SquareCreateShareInput } from './squareApiClient'
 import {
   SQUARE_ALLOWED_IMAGE_TYPES,

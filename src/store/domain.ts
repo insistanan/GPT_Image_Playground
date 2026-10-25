@@ -7,20 +7,20 @@ import type {
   ProviderConfig,
   ResponsesPromptRevisionMode,
   TaskRecord,
-} from '../types'
+} from '@/types'
 import {
   ALL_CATEGORY_FILTER,
   DEFAULT_SETTINGS,
   FAVORITES_CATEGORY_FILTER,
   UNCATEGORIZED_CATEGORY_FILTER,
-} from '../types'
-import { isRecord } from '../lib/guards'
-import { isRemoteImageUrl } from '../lib/imageUrl'
+} from '@/types'
+import { isRecord } from '@/lib/guards'
+import { isRemoteImageUrl } from '@/lib/imageUrl'
 import type { PersistedAppStateSnapshot } from './contracts'
 import { DEFAULT_PROVIDER_NAME, genId } from './constants'
 
-export { isRecord } from '../lib/guards'
-export { isRemoteImageUrl } from '../lib/imageUrl'
+export { isRecord } from '@/lib/guards'
+export { isRemoteImageUrl } from '@/lib/imageUrl'
 
 // ===== Provider =====
 

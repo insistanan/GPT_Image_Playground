@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { parseRatio, type SizeTier } from '../../../../lib/size'
+import { parseRatio, type SizeTier } from '@/lib/size'
 import { RATIOS, TIERS, getOptionButtonClass, getPresetSizeLabel, type SizePickerRatioValue } from './shared'
 
 interface SizePickerRatioPanelProps {

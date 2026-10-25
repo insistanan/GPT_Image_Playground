@@ -1,5 +1,5 @@
-import type { TaskResponseMeta } from '../../types'
-import { isRecord } from '../guards'
+import type { TaskResponseMeta } from '@/types'
+import { isRecord } from '@/lib/guards'
 import { throwIfSignalAborted } from './abort'
 import {
   base64ToBlob,

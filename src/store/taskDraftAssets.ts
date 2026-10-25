@@ -1,4 +1,4 @@
-import type { InputImage } from '../types'
+import type { InputImage } from '@/types'
 import { storeImage } from './imageAssets'
 import type { StagedTaskDraftAssets } from './taskDraftBuilder'
 

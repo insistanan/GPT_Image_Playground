@@ -1,6 +1,6 @@
-import { useImageAssetView } from '../../../../hooks/useImageAssetView'
-import { resolveTaskKind, resolveTaskStatusLabel } from '../../../../store'
-import type { TaskRecord } from '../../../../types'
+import { useImageAssetView } from '@/hooks/useImageAssetView'
+import { resolveTaskKind, resolveTaskStatusLabel } from '@/store'
+import type { TaskRecord } from '@/types'
 import { formatLocaleTime } from './shared'
 
 export interface DetailTaskLineageRailItem {

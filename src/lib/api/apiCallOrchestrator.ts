@@ -1,5 +1,5 @@
-import { DEV_PROXY_TARGET_HEADER, normalizeProxyTargetBaseUrl, readClientDevProxyConfig } from '../devProxy'
-import type { AppSettings } from '../../types'
+import { DEV_PROXY_TARGET_HEADER, normalizeProxyTargetBaseUrl, readClientDevProxyConfig } from '@/lib/devProxy'
+import type { AppSettings } from '@/types'
 import { getApiProtocol, MIME_MAP } from './config'
 import { attachLocalDebugToError } from './debug'
 import { callImagesApi } from './images'

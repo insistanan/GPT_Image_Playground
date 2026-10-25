@@ -7,13 +7,13 @@ import {
   runGalleryCreateCategory,
   runGalleryRenameCategory,
   useStore,
-} from '../../../../store'
+} from '@/store'
 import {
   ALL_CATEGORY_FILTER,
   FAVORITES_CATEGORY_FILTER,
   UNCATEGORIZED_CATEGORY_FILTER,
   resolveCategoryFilterName,
-} from '../../../../types'
+} from '@/types'
 import { type CategoryChipItem, type CategoryEditorMode } from './shared'
 import { useCategoryLooping } from './useCategoryLooping'
 

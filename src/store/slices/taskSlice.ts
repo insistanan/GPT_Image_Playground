@@ -1,5 +1,5 @@
-import { ALL_CATEGORY_FILTER } from "../../types"
-import { normalizeCategoryList, resolveActiveCategoryFilter } from "../domain"
+import { ALL_CATEGORY_FILTER } from "@/types"
+import { normalizeCategoryList, resolveActiveCategoryFilter } from "@/store/domain"
 
 export function createTaskSlice(set: any) {
   return {

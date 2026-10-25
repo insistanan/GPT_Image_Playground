@@ -19,10 +19,10 @@ import {
   resolveTaskTransportMeta,
   runGalleryEditOutputs,
   useStore,
-} from '../../../../store'
-import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
-import { copyImageToClipboard } from '../../../../lib/clipboardImage'
-import { buildTaskLineage } from '../../../../store/taskLineage'
+} from '@/store'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
+import { copyImageToClipboard } from '@/lib/clipboardImage'
+import { buildTaskLineage } from '@/store/taskLineage'
 import DetailImagePanel from './DetailImagePanel'
 import DetailInfoPanel from './DetailInfoPanel'
 import DetailTaskLineageRail, { type DetailTaskLineageRailItem } from './DetailTaskLineageRail'

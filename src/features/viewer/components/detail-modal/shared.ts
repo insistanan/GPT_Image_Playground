@@ -1,4 +1,4 @@
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 
 export const RECYCLE_BIN_RETENTION_MS = 15 * 24 * 60 * 60 * 1000
 

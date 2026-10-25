@@ -1,4 +1,4 @@
-import type { CategoryConfig } from '../../../../types'
+import type { CategoryConfig } from '@/types'
 import { ACTION_BUTTON_CLASS, type CategoryEditorMode } from './shared'
 
 interface CategoryEditorActionsProps {

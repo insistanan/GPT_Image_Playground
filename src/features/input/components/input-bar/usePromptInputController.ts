@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type KeyboardEventHandler } from 'react'
-import { submitTask } from '../../../../store'
+import { submitTask } from '@/store'
 import type { PromptSectionViewModel } from './useInputBarState'
 
 interface UsePromptInputControllerOptions {

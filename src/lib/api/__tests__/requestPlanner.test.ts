@@ -6,8 +6,8 @@ import {
   isResponsesRelayFailure,
   shouldRetryImagesPlan,
   shouldRetryResponsesWithCompatibility,
-} from "../requestPlanner"
-import { resetStreamSupportCache } from "../streamSupport"
+} from "@/lib/api/requestPlanner"
+import { resetStreamSupportCache } from "@/lib/api/streamSupport"
 
 beforeEach(() => {
   resetStreamSupportCache()

@@ -1,10 +1,10 @@
-import { putTask } from '../lib/db'
-import type { TaskRecord } from '../types'
+import { putTask } from '@/lib/db'
+import type { TaskRecord } from '@/types'
 import {
   ALL_CATEGORY_FILTER,
   FAVORITES_CATEGORY_FILTER,
   UNCATEGORIZED_CATEGORY_FILTER,
-} from '../types'
+} from '@/types'
 import { findCategoryById } from './domain'
 import { storeImage } from './imageAssets'
 import { useStore } from './state'

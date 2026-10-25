@@ -1,6 +1,6 @@
-import { createPromptLibraryItem, normalizePromptLibraryItems } from "../domain"
-import { evictImage } from "../imageAssets"
-import { DEFAULT_PARAMS } from "../taskParams"
+import { createPromptLibraryItem, normalizePromptLibraryItems } from "@/store/domain"
+import { evictImage } from "@/store/imageAssets"
+import { DEFAULT_PARAMS } from "@/store/taskParams"
 
 export function createInputDraftSlice(set: any) {
   return {

@@ -1,4 +1,4 @@
-import type { ImageEditSelection, ImageEditSession, InputImage, TaskRecord } from '../types'
+import type { ImageEditSelection, ImageEditSession, InputImage, TaskRecord } from '@/types'
 import { writeImageEditDraft } from './taskDraftBuilder'
 import { getImageView } from './imageAssets'
 import { submitTask } from './runtime'

@@ -1,4 +1,4 @@
-import { deleteTask as dbDeleteTask } from '../lib/db'
+import { deleteTask as dbDeleteTask } from '@/lib/db'
 import { removeImage } from './imageAssets'
 import { useStore } from './state'
 import { clearPurgedTaskUiState } from './taskStoreUtils'

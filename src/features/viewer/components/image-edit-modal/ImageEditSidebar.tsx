@@ -1,5 +1,5 @@
-import Select from '../../../../shared/components/Select'
-import type { ImageEditSelection, ImageEditSession } from '../../../../types'
+import Select from '@/shared/components/Select'
+import type { ImageEditSelection, ImageEditSession } from '@/types'
 import type { ImageNaturalSize } from './shared'
 
 interface ProviderOption {

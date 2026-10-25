@@ -1,5 +1,5 @@
-import type { TaskRecord } from '../../../../types'
-import { isTaskRunExceptional, resolveTaskRunOutcome } from '../../../../store'
+import type { TaskRecord } from '@/types'
+import { isTaskRunExceptional, resolveTaskRunOutcome } from '@/store'
 
 interface TaskCardPreviewStatusLayerProps {
   task: TaskRecord

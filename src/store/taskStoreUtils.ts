@@ -1,5 +1,5 @@
-import { putTask } from '../lib/db'
-import type { TaskRecord } from '../types'
+import { putTask } from '@/lib/db'
+import type { TaskRecord } from '@/types'
 import { useStore } from './state'
 import {
   mergeCategoriesFromTasks,

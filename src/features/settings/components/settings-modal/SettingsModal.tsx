@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { normalizeBaseUrl, readClientDevProxyConfig } from '../../../../lib/devProxy'
-import { useStore, exportData, importData, clearAllData } from '../../../../store'
-import { DEFAULT_SETTINGS, type AppSettings } from '../../../../types'
-import { useCloseOnEscape } from '../../../../hooks/useCloseOnEscape'
+import { normalizeBaseUrl, readClientDevProxyConfig } from '@/lib/devProxy'
+import { useStore, exportData, importData, clearAllData } from '@/store'
+import { DEFAULT_SETTINGS, type AppSettings } from '@/types'
+import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
 import ApiSettingsSection from './ApiSettingsSection'
 import DataManagementSection from './DataManagementSection'
 

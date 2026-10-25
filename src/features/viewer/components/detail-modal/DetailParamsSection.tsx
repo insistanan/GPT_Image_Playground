@@ -1,5 +1,5 @@
-import type { TaskRecord } from '../../../../types'
-import { resolveTaskKind } from '../../../../store'
+import type { TaskRecord } from '@/types'
+import { resolveTaskKind } from '@/store'
 
 interface DetailParamsSectionProps {
   task: TaskRecord

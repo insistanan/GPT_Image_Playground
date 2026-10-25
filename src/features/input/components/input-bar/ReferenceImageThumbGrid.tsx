@@ -1,4 +1,4 @@
-import type { InputImage } from '../../../../types'
+import type { InputImage } from '@/types'
 import { isRemotePreviewUrl } from './shared'
 
 interface ReferenceImageThumbGridProps {

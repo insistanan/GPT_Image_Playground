@@ -1,6 +1,6 @@
-import type { AppSettings, TaskBackground, TaskInputFidelity, TaskParams, TaskQuality } from '../../types'
+import type { AppSettings, TaskBackground, TaskInputFidelity, TaskParams, TaskQuality } from '@/types'
 import { getImageGenerationModel, isGptImage25Model } from './imageModels'
-import { normalizeImageSize } from '../size'
+import { normalizeImageSize } from '@/lib/size'
 
 export const MAX_OPENAI_OUTPUT_IMAGES = 10
 export const DEFAULT_STREAM_PARTIAL_IMAGES = 1

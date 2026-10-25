@@ -3,7 +3,7 @@ import {
   buildResponsesOutputItemFromFieldReaders,
   sanitizeResponsesOutputItem,
   buildCompactResponsesPayload,
-} from "../payloadFacts"
+} from "@/lib/api/payloadFacts"
 
 function fieldReadersFromRecord(record: Record<string, unknown>) {
   return {

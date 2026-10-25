@@ -1,4 +1,4 @@
-import { DEV_PROXY_TARGET_HEADER, readClientDevProxyConfig, type DevProxyConfig } from '../devProxy'
+import { DEV_PROXY_TARGET_HEADER, readClientDevProxyConfig, type DevProxyConfig } from '@/lib/devProxy'
 import { abortAwareFetch, throwIfSignalAborted } from './abort'
 import type { ApiError } from './types'
 

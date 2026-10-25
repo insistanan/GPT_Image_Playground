@@ -1,5 +1,5 @@
-import type { TaskRecord } from '../types'
-import { UNCATEGORIZED_CATEGORY_FILTER } from '../types'
+import type { TaskRecord } from '@/types'
+import { UNCATEGORIZED_CATEGORY_FILTER } from '@/types'
 import { findCategoryById } from './domain'
 import { editOutputs } from './imageEditActions'
 import {

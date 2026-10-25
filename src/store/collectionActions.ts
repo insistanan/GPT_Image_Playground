@@ -1,5 +1,5 @@
-import type { CategoryConfig, TaskRecord } from '../types'
-import { UNCATEGORIZED_CATEGORY_FILTER } from '../types'
+import type { CategoryConfig, TaskRecord } from '@/types'
+import { UNCATEGORIZED_CATEGORY_FILTER } from '@/types'
 import {
   createCategoryConfig,
   ensureCategoryNameAvailable,

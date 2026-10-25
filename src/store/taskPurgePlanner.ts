@@ -1,4 +1,4 @@
-import type { TaskRecord } from '../types'
+import type { TaskRecord } from '@/types'
 import { getTaskReferencedImageIds } from './domain'
 
 export interface TaskPurgePlanInput {

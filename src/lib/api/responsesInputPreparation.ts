@@ -1,4 +1,4 @@
-import type { ResponsesImageInputMode } from '../../types'
+import type { ResponsesImageInputMode } from '@/types'
 import { abortAwareFetch } from './abort'
 import { buildRequestUrl } from './config'
 import {
@@ -16,7 +16,7 @@ import {
   shrinkDataUrlForResponses,
   shrinkImageAndMaskForResponses,
 } from './imageTransforms'
-import { isRecord } from '../guards'
+import { isRecord } from '@/lib/guards'
 import type {
   ApiError,
   CallApiOptions,

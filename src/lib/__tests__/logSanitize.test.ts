@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeDebugValue } from '../api/debug'
+import { sanitizeDebugValue } from '@/lib/api/debug'
 import {
   isSensitiveFieldName,
   LOG_BODY_PARSE_LIMIT,
@@ -8,7 +8,7 @@ import {
   summarizeHeaders,
   summarizeLogString,
   summarizeResponseHeaders,
-} from '../logSanitize'
+} from '@/lib/logSanitize'
 
 const textEncoder = new TextEncoder()
 

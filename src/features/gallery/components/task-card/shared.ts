@@ -1,5 +1,5 @@
 import type { MouseEvent as ReactMouseEvent } from 'react'
-import type { TaskRecord } from '../../../../types'
+import type { TaskRecord } from '@/types'
 
 export interface TaskCardProps {
   task: TaskRecord

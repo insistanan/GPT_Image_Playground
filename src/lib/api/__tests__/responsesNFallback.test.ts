@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isUnsupportedOutputCountError, shouldBlockConcurrentNFallback } from '../requestPlanner'
+import { isUnsupportedOutputCountError, shouldBlockConcurrentNFallback } from '@/lib/api/requestPlanner'
 
 describe('responses n fallback helpers', () => {
   it('detects unsupported n errors', () => {

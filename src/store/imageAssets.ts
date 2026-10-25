@@ -6,10 +6,10 @@ import {
   storeImageBlob,
   storeLegacyDataUrl,
   storeRemoteImage,
-} from '../lib/db'
-import { buildImageThumbnail } from '../lib/imagePreview'
-import { isRemoteImageUrl } from '../lib/imageUrl'
-import type { StoredImage, StoredImageSource } from '../types'
+} from '@/lib/db'
+import { buildImageThumbnail } from '@/lib/imagePreview'
+import { isRemoteImageUrl } from '@/lib/imageUrl'
+import type { StoredImage, StoredImageSource } from '@/types'
 import {
   clearImageCaches,
   deleteCachedImage,
