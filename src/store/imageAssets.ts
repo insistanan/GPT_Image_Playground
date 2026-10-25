@@ -208,8 +208,6 @@ export async function saveImageAssetBlob(
   setCachedImage(imageId, blob, 'original')
   if (thumbnailBlob) {
     setCachedImage(imageId, thumbnailBlob, 'thumbnail')
-  } else {
-    setCachedImage(imageId, blob, 'thumbnail')
   }
   if (width && height) {
     setCachedImageMetadata(imageId, { width, height })
