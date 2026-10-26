@@ -58,6 +58,8 @@ export default function ApiModelSettings({
               Images API 直接调用的图片模型，例如{' '}
               <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2.5-sunburst</code>
               。切换到 Responses 协议时会自动改为对话模型，并把当前生图模型回填到下方「Responses 图像模型」。
+              <br />
+              也可以直接输入供应商自定义的模型 ID，失焦或按 Enter 保存。
             </>
           )}
         </div>
@@ -78,7 +80,7 @@ export default function ApiModelSettings({
             仅 Responses API 生效，作为{' '}
             <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">tools[].model</code>{' '}
             传入，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">gpt-image-2.5-sunburst</code>
-            。
+            。也可以直接输入自定义模型 ID，失焦或按 Enter 保存。
           </div>
         </label>
       ) : null}

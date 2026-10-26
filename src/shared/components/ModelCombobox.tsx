@@ -7,6 +7,7 @@ export interface ModelOption {
   label?: string
   hint?: string
   deprecated?: boolean
+  custom?: boolean
 }
 
 interface ModelComboboxProps {
@@ -42,11 +43,25 @@ export default function ModelCombobox({
 
   const filteredOptions = useMemo(() => {
     const query = value.trim().toLowerCase()
-    if (!query) return options
-    return options.filter((option) => {
-      const label = (option.label ?? option.value).toLowerCase()
-      return label.includes(query) || option.value.toLowerCase().includes(query)
-    })
+    const matches = !query
+      ? options
+      : options.filter((option) => {
+          const label = (option.label ?? option.value).toLowerCase()
+          return label.includes(query) || option.value.toLowerCase().includes(query)
+        })
+
+    const hasExactOption = options.some((option) => option.value.toLowerCase() === query)
+    if (!query || hasExactOption) return matches
+
+    return [
+      {
+        value: value.trim(),
+        label: `使用自定义模型 “${value.trim()}”`,
+        hint: 'Enter 保存',
+        custom: true,
+      },
+      ...matches,
+    ]
   }, [options, value])
 
   useEffect(() => {
@@ -169,7 +184,9 @@ export default function ModelCombobox({
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate font-mono">{option.label ?? option.value}</span>
+                    <span className={`truncate ${option.custom ? 'font-sans' : 'font-mono'}`}>
+                      {option.label ?? option.value}
+                    </span>
                     {option.deprecated ? (
                       <span className="flex-shrink-0 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
                         即将下线

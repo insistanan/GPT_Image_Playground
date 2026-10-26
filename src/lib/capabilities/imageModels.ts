@@ -17,6 +17,7 @@ export interface CatalogModelOption {
 export const IMAGE_MODEL_OPTIONS: CatalogModelOption[] = [
   { value: 'gpt-image-2.5-sunburst', hint: '最新 · 默认 · 编辑精度' },
   { value: 'gpt-image-2.5-flare', hint: '最新 · 速度优先' },
+  { value: 'gpt-images-2.5', hint: '兼容渠道' },
   { value: 'gpt-image-2', hint: '稳定' },
   { value: 'gpt-image-1.5', hint: '下线 2026-12-01', deprecated: true },
   { value: 'gpt-image-1-mini', hint: '下线 2026-12-01', deprecated: true },
@@ -39,7 +40,8 @@ export function isImageModelId(id: string | null | undefined): boolean {
 }
 
 export function isGptImage25Model(model: string | null | undefined): boolean {
-  return (model ?? '').trim().toLowerCase().includes('gpt-image-2.5')
+  const normalized = (model ?? '').trim().toLowerCase()
+  return normalized.includes('gpt-image-2.5') || normalized.includes('gpt-images-2.5')
 }
 
 /** 当前协议实际用来生图的模型：Images 用顶层 model，Responses 用 tools[].model。 */
