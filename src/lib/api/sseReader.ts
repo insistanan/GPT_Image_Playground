@@ -370,6 +370,10 @@ export async function readResponsesPayloadStream(
           }
         },
       )
+
+      // 完成事件已经带有最终图片，立即结束读取，避免等待供应商关闭 SSE
+      // 连接导致浏览器超时并重复提交同一张图片。
+      return event.event === 'response.completed'
     },
     {
       deferJsonParsing: true,
@@ -490,6 +494,9 @@ export async function readImagesPayloadStream(
           }
         },
       )
+
+      // Images API 的 completed 事件包含完整 b64_json；不依赖上游随后发送 EOF。
+      return isCompletedImagesPayload(event.json)
     },
   )
 

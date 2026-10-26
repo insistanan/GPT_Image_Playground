@@ -145,7 +145,16 @@ function shouldFallbackResponsesStreamToJson(
     return false
   }
 
-  return !shouldBlockTransportFallback(error)
+  return isExplicitStreamCompatibilityRejection(error)
+}
+
+function isExplicitStreamCompatibilityRejection(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const status = (error as ApiError).status
+  return status != null && [400, 404, 405, 415, 422, 501].includes(status)
 }
 
 /**
@@ -207,7 +216,7 @@ export function shouldRetryImagesPlan(
   }
 
   if (currentPlan.transport === 'stream' && nextPlan.transport === 'json') {
-    return !shouldBlockTransportFallback(error)
+    return isExplicitStreamCompatibilityRejection(error)
   }
 
   if (shouldBlockTransportFallback(error)) {

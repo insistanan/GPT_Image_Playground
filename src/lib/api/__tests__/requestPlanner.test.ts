@@ -64,8 +64,14 @@ describe("shouldRetryImagesPlan", () => {
   const streamPlan = { id: "stream", transport: "stream" as const, bodyMode: "json" as const }
   const jsonPlan = { id: "json", transport: "json" as const, bodyMode: "json" as const }
 
-  it("allows stream->json fallback for server errors", () => {
-    expect(shouldRetryImagesPlan(new Error("HTTP 500 error"), streamPlan, jsonPlan)).toBe(true)
+  it("allows stream->json fallback for explicit compatibility rejections", () => {
+    expect(shouldRetryImagesPlan(Object.assign(new Error("HTTP 400 error"), { status: 400 }), streamPlan, jsonPlan)).toBe(true)
+  })
+
+  it("does not duplicate generation after network or stream read failures", () => {
+    expect(shouldRetryImagesPlan(new TypeError("Failed to fetch"), streamPlan, jsonPlan)).toBe(false)
+    expect(shouldRetryImagesPlan(Object.assign(new Error("stream closed"), { status: 200 }), streamPlan, jsonPlan)).toBe(false)
+    expect(shouldRetryImagesPlan(Object.assign(new Error("HTTP 500 error"), { status: 500 }), streamPlan, jsonPlan)).toBe(false)
   })
 
   it("blocks fallback on auth errors", () => {

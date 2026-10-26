@@ -74,6 +74,11 @@ export async function abortAwareFetch(
       // signal 缺失时理论上不会抛 AbortError；真发生了则保留原始错误，避免丢失信息。
       throw signal ? createAbortErrorFromSignal(signal) : error
     }
+    if (error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)) {
+      throw new Error(
+        '浏览器无法连接请求地址。请检查网络、本地网关是否运行及 CORS 来源配置；如果网关日志出现 TLS handshake timeout，则是网关连接上游超时。',
+      )
+    }
     throw error
   }
 }

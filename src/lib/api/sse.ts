@@ -151,7 +151,7 @@ function feedIncrementalSseParser(
 export async function consumeSseResponseText(
   response: Response,
   signal: AbortSignal,
-  onEvent?: (event: ParsedSseEvent) => void | Promise<void>,
+  onEvent?: (event: ParsedSseEvent) => void | boolean | Promise<void | boolean>,
   options?: IncrementalSseParserOptions,
 ): Promise<{ text: string; sawAnyEvents: boolean }> {
   throwIfSignalAborted(signal)
@@ -168,6 +168,10 @@ export async function consumeSseResponseText(
   const parserState = createIncrementalSseParserState()
   let text = ''
   let sawAnyEvents = false
+
+  const cancelReader = async () => {
+    await reader.cancel().catch(() => undefined)
+  }
 
   const readNextChunk = async (): Promise<ReadableStreamReadResult<Uint8Array>> => {
     throwIfSignalAborted(signal)
@@ -211,7 +215,10 @@ export async function consumeSseResponseText(
     if (typeof onEvent === 'function') {
       for (const event of events) {
         throwIfSignalAborted(signal)
-        await onEvent(event)
+        if (await onEvent(event)) {
+          await cancelReader()
+          return { text, sawAnyEvents }
+        }
       }
     }
   }
@@ -229,7 +236,10 @@ export async function consumeSseResponseText(
   if (typeof onEvent === 'function') {
     for (const event of finalEvents) {
       throwIfSignalAborted(signal)
-      await onEvent(event)
+      if (await onEvent(event)) {
+        await cancelReader()
+        return { text, sawAnyEvents }
+      }
     }
   }
 
