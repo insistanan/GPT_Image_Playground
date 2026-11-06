@@ -53,6 +53,24 @@ async function loadTaskEditMaskDataUrl(
   return editMaskDataUrl
 }
 
+async function loadTaskEditMarkupDataUrl(
+  task: TaskRecord,
+  throwIfAborted?: () => void,
+): Promise<string | undefined> {
+  if (!task.editMarkupImageId) {
+    return undefined
+  }
+
+  throwIfAborted?.()
+  const editMarkupDataUrl = await getImageView(task.editMarkupImageId).getRawDataUrl()
+  throwIfAborted?.()
+  if (!editMarkupDataUrl) {
+    throw new Error('局部编辑标注缺失，请重新绘制标注后再试')
+  }
+
+  return editMarkupDataUrl
+}
+
 export async function callTaskImageApi(
   task: TaskRecord,
   settings: AppSettings,
@@ -63,6 +81,7 @@ export async function callTaskImageApi(
     handlers.throwIfAborted,
   )
   const editMaskDataUrl = await loadTaskEditMaskDataUrl(task, handlers.throwIfAborted)
+  const editMarkupDataUrl = await loadTaskEditMarkupDataUrl(task, handlers.throwIfAborted)
   handlers.throwIfAborted?.()
 
   return callImageApi({
@@ -75,6 +94,11 @@ export async function callTaskImageApi(
           dataUrl: editMaskDataUrl,
           sourceImageId: task.editSourceImageId ?? null,
           selection: task.editSelection ?? null,
+        }
+      : null,
+    editMarkup: editMarkupDataUrl
+      ? {
+          dataUrl: editMarkupDataUrl,
         }
       : null,
     onFinalImages: handlers.onFinalImages,

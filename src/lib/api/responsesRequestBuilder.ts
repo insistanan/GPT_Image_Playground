@@ -1,5 +1,5 @@
 import { buildResponsesPrompt, getResponsesImageModel } from './config'
-import { appendSharedImageParams } from './sharedImageParams'
+import { appendSafetyIdentifier, appendSharedImageParams } from './sharedImageParams'
 import type {
   CallApiOptions,
   ResponsesInputContent,
@@ -73,12 +73,18 @@ export function buildResponsesRequestBody({
   if (params.moderation) {
     tool.moderation = params.moderation
   }
-  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
+  if (
+    params.output_format !== 'png' &&
+    params.output_format !== 'gif' &&
+    params.output_format !== 'svg' &&
+    params.output_compression != null
+  ) {
     tool.output_compression = params.output_compression
   }
   appendSharedImageParams(tool, params, {
     isEdit: hasReferenceImages,
     stream: plan.transport === 'stream',
+    partialImages: settings.partialImages,
   })
   if (editMask) {
     tool.input_image_mask = editMask
@@ -92,6 +98,7 @@ export function buildResponsesRequestBody({
     input: buildResponsesInputPayload(responsesPrompt, inputImages, plan.inputPayloadMode),
     tools: [tool],
   }
+  appendSafetyIdentifier(body, settings)
 
   if (plan.transport === 'stream') {
     body.stream = true

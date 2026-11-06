@@ -31,6 +31,7 @@ export async function editOutputs(task: TaskRecord, preferredImageId?: string) {
     prompt: task.prompt,
     params: task.params,
     initialSelection: task.editSelection ?? null,
+    initialMarkupDataUrl: null,
   })
 }
 
@@ -60,6 +61,7 @@ export function reopenImageEditorFromInputImage(inputImage: InputImage) {
     prompt: sourceTask?.prompt ?? prompt.trim(),
     params: sourceTask?.params ?? params,
     initialSelection: inputImage.editSelection ?? null,
+    initialMarkupDataUrl: inputImage.markupDataUrl ?? null,
   })
 }
 
@@ -74,8 +76,8 @@ export function clearInputImageEdit(index: number) {
     return
   }
 
-  if (!targetImage.maskDataUrl && !targetImage.editSelection) {
-    showToast('这张参考图当前没有局部编辑蒙版', 'info')
+  if (!targetImage.maskDataUrl && !targetImage.markupDataUrl && !targetImage.editSelection) {
+    showToast('这张参考图当前没有局部编辑蒙版或标注', 'info')
     return
   }
 
@@ -85,12 +87,13 @@ export function clearInputImageEdit(index: number) {
         ? {
             ...image,
             maskDataUrl: null,
+            markupDataUrl: null,
             editSelection: null,
           }
         : image,
     ),
   )
-  showToast('已移除该参考图的局部编辑区域', 'success')
+  showToast('已移除该参考图的局部编辑区域与标注', 'success')
 }
 
 export async function applyImageEditToInput(options: {
@@ -98,6 +101,7 @@ export async function applyImageEditToInput(options: {
   prompt: string
   providerId?: string | null
   maskDataUrl?: string | null
+  markupDataUrl?: string | null
   selection?: ImageEditSelection | null
   sourceSize?: string
   submit?: boolean
@@ -121,6 +125,7 @@ export async function applyImageEditToInput(options: {
     prompt: options.prompt,
     providerId: options.providerId,
     maskDataUrl: options.maskDataUrl,
+    markupDataUrl: options.markupDataUrl,
     selection: options.selection,
     sourceSize: options.sourceSize,
   })
@@ -135,12 +140,16 @@ export async function applyImageEditToInput(options: {
   setImageEditSession(null)
   showToast(
     options.submit
-      ? options.maskDataUrl
-        ? '已写入输入区，正在提交局部编辑任务'
-        : '已写入输入区，正在提交整图编辑任务'
-      : options.maskDataUrl
-        ? '已写入局部编辑输入区'
-        : '已写入整图编辑输入区',
+      ? options.markupDataUrl
+        ? '已写入输入区，正在提交标注编辑任务'
+        : options.maskDataUrl
+          ? '已写入输入区，正在提交局部编辑任务'
+          : '已写入输入区，正在提交整图编辑任务'
+      : options.markupDataUrl
+        ? '已写入标注编辑输入区'
+        : options.maskDataUrl
+          ? '已写入局部编辑输入区'
+          : '已写入整图编辑输入区',
     'success',
   )
 

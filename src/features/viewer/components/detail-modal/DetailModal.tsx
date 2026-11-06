@@ -214,6 +214,7 @@ export default function DetailModal() {
         inputImageIds: task.inputImageIds,
         outputImages: task.outputImages,
         editMaskImageId: task.editMaskImageId ?? null,
+        editMarkupImageId: task.editMarkupImageId ?? null,
         editSourceImageId: task.editSourceImageId ?? null,
         editSelection: task.editSelection ?? null,
         responseMeta: task.responseMeta ?? null,

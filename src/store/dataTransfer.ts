@@ -41,6 +41,7 @@ import { isRemoteImageUrl } from '@/lib/imageUrl'
 import {
   clampOutputImageCount,
   isTaskBackground,
+  isTaskComplexity,
   isTaskInputFidelity,
   isTaskQuality,
 } from '@/lib/capabilities'
@@ -156,7 +157,7 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
 }
 
 function isTaskOutputFormat(value: unknown): value is TaskParams['output_format'] {
-  return value === 'png' || value === 'jpeg' || value === 'webp' || value === 'gif'
+  return value === 'png' || value === 'jpeg' || value === 'webp' || value === 'gif' || value === 'svg'
 }
 
 function isTaskModeration(value: unknown): value is TaskParams['moderation'] {
@@ -231,6 +232,7 @@ function getImportedParams(
     ),
     background: isTaskBackground(record.background) ? record.background : DEFAULT_PARAMS.background,
     input_fidelity: isTaskInputFidelity(record.input_fidelity) ? record.input_fidelity : null,
+    complexity: isTaskComplexity(record.complexity) ? record.complexity : DEFAULT_PARAMS.complexity,
     frame_count:
       typeof frameCount === 'number' && Number.isFinite(frameCount) ? Math.round(frameCount) : null,
     frame_duration_ms:

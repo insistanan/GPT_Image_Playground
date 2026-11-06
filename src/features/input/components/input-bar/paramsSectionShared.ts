@@ -42,6 +42,7 @@ export const OUTPUT_FORMAT_OPTIONS = [
   { label: 'JPEG', value: 'jpeg' },
   { label: 'WebP', value: 'webp' },
   { label: 'GIF', value: 'gif' },
+  { label: 'SVG', value: 'svg' },
 ] as const
 
 /** 选中 GIF 时填入的建议值；与官方默认一致，用户仍可清空改为跟随上游。 */
@@ -56,6 +57,13 @@ export const GIF_FRAME_DURATION_HINT = `至少 ${MIN_GIF_FRAME_DURATION_MS} 毫�
 export const MODERATION_OPTIONS = [
   { label: 'auto', value: 'auto' },
   { label: 'low', value: 'low' },
+] as const
+
+export const COMPLEXITY_OPTIONS = [
+  { label: '默认', value: '' },
+  { label: 'low', value: 'low' },
+  { label: 'medium', value: 'medium' },
+  { label: 'high', value: 'high' },
 ] as const
 
 export function getQualityOptions(supportsXHighQuality: boolean): Array<{ label: string; value: TaskQuality }> {

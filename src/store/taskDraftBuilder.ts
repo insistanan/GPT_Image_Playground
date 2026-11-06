@@ -41,6 +41,8 @@ export interface StagedTaskDraftAssets {
   inputImageIds: string[]
   maskedInput: InputImage | null
   editMaskImageId: string | null
+  markupInput: InputImage | null
+  editMarkupImageId: string | null
 }
 
 export interface PreparedTaskDraft {
@@ -58,6 +60,7 @@ export interface ImageEditDraftWriteInput {
   prompt: string
   providerId?: string | null
   maskDataUrl?: string | null
+  markupDataUrl?: string | null
   selection?: ImageEditSelection | null
   sourceSize?: string
 }
@@ -122,7 +125,11 @@ export function buildPreparedTaskDraft(
       params: normalizedParams,
       inputImageIds: stagedAssets.inputImageIds,
       editMaskImageId: stagedAssets.editMaskImageId,
-      editSourceImageId: stagedAssets.maskedInput?.sourceImageId ?? stagedAssets.maskedInput?.id ?? null,
+      editMarkupImageId: stagedAssets.editMarkupImageId,
+      editSourceImageId:
+        (stagedAssets.maskedInput ?? stagedAssets.markupInput)?.sourceImageId ??
+        (stagedAssets.maskedInput ?? stagedAssets.markupInput)?.id ??
+        null,
       editSelection: stagedAssets.maskedInput?.editSelection ?? null,
     }),
     requestSettings,
@@ -158,6 +165,7 @@ export function writeImageEditDraft(input: ImageEditDraftWriteInput): ImageEditD
         id: input.session.sourceImageId,
         dataUrl: input.session.sourceImageDataUrl,
         maskDataUrl: input.maskDataUrl ?? null,
+        markupDataUrl: input.markupDataUrl ?? null,
         editSelection: input.selection ?? null,
         sourceTaskId: derivedSourceTaskId,
         sourceImageId: input.session.sourceImageId,

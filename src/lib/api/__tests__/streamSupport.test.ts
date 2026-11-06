@@ -20,6 +20,8 @@ function fakeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     timeout: 900,
     apiProtocol: 'images',
     requestMode: 'direct',
+    safetyIdentifier: '',
+    partialImages: 1,
     ...overrides,
   }
 }

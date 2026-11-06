@@ -119,6 +119,22 @@ export default function ApiSettingsSection({
           </div>
         </div>
 
+        <label className="block">
+          <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">安全标识 (safety_identifier)</span>
+          <input
+            value={draft.safetyIdentifier}
+            onChange={(event) => setDraft((prev) => ({ ...prev, safetyIdentifier: event.target.value }))}
+            onBlur={(event) => commitSettings({ ...draft, safetyIdentifier: event.target.value })}
+            type="text"
+            maxLength={128}
+            placeholder="可选，最多 128 字符"
+            className={fieldClassName}
+          />
+          <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+            用于上游安全追踪，留空则不发送。
+          </div>
+        </label>
+
         <ApiRequestSettings
           draft={draft}
           proxyConfig={proxyConfig}

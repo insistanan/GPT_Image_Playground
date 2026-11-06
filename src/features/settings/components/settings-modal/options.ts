@@ -33,6 +33,13 @@ export const RESPONSES_IMAGE_INPUT_MODE_OPTIONS: Array<{
   { label: '上传 file_id', value: 'file_id' },
 ]
 
+export const PARTIAL_IMAGES_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: '0（只看最终图）', value: 0 },
+  { label: '1 张预览', value: 1 },
+  { label: '2 张预览', value: 2 },
+  { label: '3 张预览', value: 3 },
+]
+
 export const RESPONSES_PROMPT_REVISION_MODE_OPTIONS: Array<{
   label: string
   value: ResponsesPromptRevisionMode

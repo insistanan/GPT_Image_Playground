@@ -10,6 +10,7 @@ export const DEFAULT_PARAMS: TaskParams = {
   n: 1,
   background: 'auto',
   input_fidelity: null,
+  complexity: null,
   frame_count: null,
   frame_duration_ms: null,
 }

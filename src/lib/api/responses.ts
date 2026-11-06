@@ -21,6 +21,7 @@ import {
 import {
   buildTaskResponseMetaFromCalls,
 } from './imagePayload'
+import { normalizeModerationRejectionError } from './moderation'
 import { normalizeResponsesResponse } from './responsesNormalizer'
 
 import {
@@ -202,7 +203,7 @@ async function executeResponsesRequest(
       break
     } catch (error) {
       if (!planner.failAndAdvance(error)) {
-        throw error
+        throw normalizeModerationRejectionError(error)
       }
     }
   }

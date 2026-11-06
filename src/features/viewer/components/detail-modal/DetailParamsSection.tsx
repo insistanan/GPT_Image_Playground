@@ -119,6 +119,9 @@ export default function DetailParamsSection(props: DetailParamsSectionProps) {
           : null}
         {!isImageTask && appliedAction ? renderValueCard('实际动作', appliedAction) : null}
         {!isImageTask ? renderValueCard('审核', task.params.moderation) : null}
+        {!isImageTask && task.params.complexity
+          ? renderValueCard('复杂度', task.params.complexity)
+          : null}
         {!isImageTask ? renderValueCard('数量', String(task.params.n)) : null}
         {!isImageTask && task.params.output_compression != null
           ? renderValueCard('压缩率', String(task.params.output_compression))

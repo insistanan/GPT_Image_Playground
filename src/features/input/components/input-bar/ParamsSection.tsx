@@ -10,6 +10,7 @@ import ParamPopoverChip, {
 } from '@/shared/components/ParamPopoverChip'
 import {
   BACKGROUND_OPTIONS,
+  COMPLEXITY_OPTIONS,
   GIF_FRAME_COUNT_HINT,
   GIF_FRAME_DEFAULTS,
   GIF_FRAME_DURATION_HINT,
@@ -77,21 +78,23 @@ function FieldGroup({
 function CountChip({
   value,
   nInput,
+  disabled,
   onNInputChange,
   onCommitN,
   onSetParams,
 }: {
   value: number
   nInput: string
+  disabled?: boolean
   onNInputChange: (value: string) => void
   onCommitN: () => void
   onSetParams: (params: Partial<TaskParams>) => void
 }) {
-  const canDecrease = value > 1
-  const canIncrease = value < MAX_OPENAI_OUTPUT_IMAGES
+  const canDecrease = !disabled && value > 1
+  const canIncrease = !disabled && value < MAX_OPENAI_OUTPUT_IMAGES
 
   return (
-    <div className={`inline-flex h-8 items-center overflow-hidden rounded-full ${value > 1 ? CHIP_ACTIVE_CLASS : CHIP_IDLE_CLASS}`}>
+    <div className={`inline-flex h-8 items-center overflow-hidden rounded-full ${value > 1 ? CHIP_ACTIVE_CLASS : CHIP_IDLE_CLASS} ${disabled ? 'opacity-50' : ''}`}>
       <button
         type="button"
         disabled={!canDecrease}
@@ -113,6 +116,7 @@ function CountChip({
         type="number"
         min={1}
         max={MAX_OPENAI_OUTPUT_IMAGES}
+        disabled={disabled}
         inputMode="numeric"
         className="h-8 w-7 border-0 bg-transparent p-0 text-center text-xs outline-none [appearance:textfield]"
         aria-label="生成数量"
@@ -154,14 +158,18 @@ export default function ParamsSection({
   onCommitFrameDuration,
 }: ParamsSectionProps) {
   const isGif = params.output_format === 'gif'
-  const compressionDisabled = params.output_format === 'png' || isGif
+  const isSvg = params.output_format === 'svg'
+  const compressionDisabled = params.output_format === 'png' || isGif || isSvg
   const backgroundOptions = BACKGROUND_OPTIONS.map((option) =>
-    option.value === 'transparent' && params.output_format === 'jpeg' ? { ...option, disabled: true } : option,
+    option.value === 'transparent' && (params.output_format === 'jpeg' || isGif || isSvg)
+      ? { ...option, disabled: true }
+      : option,
   )
   const moreActive =
     params.output_format !== 'png' ||
     params.background !== 'auto' ||
     params.moderation !== 'auto' ||
+    params.complexity != null ||
     Boolean(params.input_fidelity)
   const gifSummary = isGif
     ? [
@@ -175,6 +183,7 @@ export default function ParamsSection({
     params.output_format.toUpperCase(),
     gifSummary,
     params.background !== 'auto' ? getBackgroundLabel(params.background) : null,
+    params.complexity ?? null,
     params.moderation !== 'auto' ? params.moderation : null,
     params.input_fidelity ? getInputFidelityLabel(params.input_fidelity) : null,
   ]
@@ -216,6 +225,7 @@ export default function ParamsSection({
         <CountChip
           value={params.n}
           nInput={nInput}
+          disabled={isSvg}
           onNInputChange={onNInputChange}
           onCommitN={onCommitN}
           onSetParams={onSetParams}
@@ -294,7 +304,7 @@ export default function ParamsSection({
                 type="number"
                 min={0}
                 max={100}
-                placeholder={isGif ? 'GIF 不使用压缩率' : '0-100'}
+                placeholder={isGif ? 'GIF 不使用压缩率' : isSvg ? 'SVG 不使用压缩率' : '0-100'}
                 aria-label="压缩率"
                 className={`w-full rounded-xl border border-gray-200/60 px-3 py-2 text-xs shadow-sm outline-none dark:border-white/[0.08] ${
                   compressionDisabled
@@ -319,6 +329,15 @@ export default function ParamsSection({
                 value={params.moderation}
                 onChange={(value) => onSetParams({ moderation: value })}
                 options={MODERATION_OPTIONS}
+              />
+            </FieldGroup>
+
+            <FieldGroup label="复杂度">
+              <SegmentedControl
+                ariaLabel="复杂度"
+                value={params.complexity ?? ''}
+                onChange={(value) => onSetParams({ complexity: value === '' ? null : value })}
+                options={COMPLEXITY_OPTIONS}
               />
             </FieldGroup>
 

@@ -58,6 +58,7 @@ function buildCallApiOptions(intent: CallImageApiIntent): CallApiOptions {
     params: intent.params,
     inputImageDataUrls: intent.inputImages.map((image) => image.dataUrl),
     editMaskDataUrl: intent.editMask?.dataUrl,
+    editMarkupDataUrl: intent.editMarkup?.dataUrl,
     editSelection: intent.editMask?.selection ?? null,
     editSourceImageIndex: resolveEditSourceImageIndex(intent),
     onFinalImages: intent.onFinalImages,
@@ -70,6 +71,32 @@ function validateRequestParams(opts: CallApiOptions): void {
   // GIF 输出不支持蒙版，提前报错避免按不同传输方式反复重试同一个不可能成功的请求。
   if (opts.params.output_format === 'gif' && opts.editMaskDataUrl != null) {
     throw createApiError('GIF 输出不支持蒙版，请取消蒙版或改用 PNG/JPEG/WebP')
+  }
+
+  // Images 协议的参考图走 /images/edits 编辑端点，该端点不支持返回 GIF。
+  if (
+    opts.params.output_format === 'gif' &&
+    getApiProtocol(opts.settings) === 'images' &&
+    opts.inputImageDataUrls.length > 0
+  ) {
+    throw createApiError('GIF 输出不支持参考图或编辑，请改用 PNG/JPEG/WebP')
+  }
+
+  // SVG 输出不支持参考图、蒙版与编辑，两种协议都要提前拦截。
+  if (
+    opts.params.output_format === 'svg' &&
+    (opts.editMaskDataUrl != null || opts.inputImageDataUrls.length > 0)
+  ) {
+    throw createApiError('SVG 输出不支持参考图、蒙版或编辑，请改用 PNG/JPEG/WebP')
+  }
+
+  if (opts.editMarkupDataUrl != null) {
+    if (opts.editMaskDataUrl != null) {
+      throw createApiError('标注（markup）不能和蒙版同时使用，请二选一')
+    }
+    if (getApiProtocol(opts.settings) !== 'images') {
+      throw createApiError('标注（markup）仅支持 Images 协议的编辑端点，请改用蒙版或切换协议')
+    }
   }
 }
 

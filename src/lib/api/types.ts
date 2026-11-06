@@ -14,6 +14,7 @@ export interface CallImageApiIntent {
   params: TaskParams
   inputImages: ApiInputImage[]
   editMask?: ApiEditMask | null
+  editMarkup?: ApiEditMarkup | null
   onFinalImages?: (images: ApiImageAsset[]) => void | Promise<void>
   onPartialImage?: (partial: ApiPartialImage) => void | Promise<void>
   registerAbort?: (abort: () => void) => void
@@ -30,12 +31,18 @@ export interface ApiEditMask {
   selection?: ImageEditSelection | null
 }
 
+/** 标注层：覆盖在第一张输入图上的透明 PNG，仅 Images 编辑端点支持。 */
+export interface ApiEditMarkup {
+  dataUrl: string
+}
+
 export interface CallApiOptions {
   settings: AppSettings
   prompt: string
   params: TaskParams
   inputImageDataUrls: string[]
   editMaskDataUrl?: string
+  editMarkupDataUrl?: string
   editSelection?: ImageEditSelection | null
   editSourceImageIndex?: number
   onFinalImages?: (images: ApiImageAsset[]) => void | Promise<void>

@@ -18,9 +18,9 @@ function isTaskEditSourceImage(
   task: TaskRecord,
   imageId: string,
   sourceImageIds: string[],
-  hasMask: boolean,
+  hasEdit: boolean,
 ): boolean {
-  if (!hasMask) {
+  if (!hasEdit) {
     return false
   }
 
@@ -32,6 +32,7 @@ function buildReusableInputImage(
   imageId: string,
   dataUrl: string,
   maskDataUrl: string | null,
+  markupDataUrl: string | null,
   isEditSourceImage: boolean,
 ): InputImage {
   const isImageTask = resolveTaskKind(task) === 'image'
@@ -40,6 +41,7 @@ function buildReusableInputImage(
     id: imageId,
     dataUrl,
     maskDataUrl: isEditSourceImage ? maskDataUrl : null,
+    markupDataUrl: isEditSourceImage ? markupDataUrl : null,
     editSelection: isEditSourceImage ? task.editSelection ?? null : null,
     sourceTaskId: isImageTask || isEditSourceImage ? task.id : null,
     lineageParentTaskId: isImageTask || isEditSourceImage ? task.id : null,
@@ -60,6 +62,10 @@ function buildReusableInputImage(
 
 export async function buildReusableInputImagesFromTask(task: TaskRecord): Promise<InputImage[]> {
   const maskDataUrl = task.editMaskImageId ? await getImageView(task.editMaskImageId).getRawDataUrl() : null
+  const markupDataUrl = task.editMarkupImageId
+    ? await getImageView(task.editMarkupImageId).getRawDataUrl()
+    : null
+  const hasEdit = Boolean(maskDataUrl || markupDataUrl)
   const sourceImageIds = resolveReusableTaskImageIds(task)
   const inputImages: InputImage[] = []
 
@@ -75,7 +81,8 @@ export async function buildReusableInputImagesFromTask(task: TaskRecord): Promis
         imageId,
         dataUrl,
         maskDataUrl ?? null,
-        isTaskEditSourceImage(task, imageId, sourceImageIds, Boolean(maskDataUrl)),
+        markupDataUrl ?? null,
+        isTaskEditSourceImage(task, imageId, sourceImageIds, hasEdit),
       ),
     )
   }

@@ -10,6 +10,9 @@ interface ImageEditCanvasPanelProps {
   selection: ImageEditSelection | null
   selectionStyle: CSSProperties | null
   selectionPixelInfo: ImageSelectionPixelInfo | null
+  markupEnabled: boolean
+  hasMarkupInk: boolean
+  markupCanvasRef: RefObject<HTMLCanvasElement | null>
   displayRect: ImageDisplayRect
   panelRef: RefObject<HTMLDivElement | null>
   imageRef: RefObject<HTMLImageElement | null>
@@ -31,6 +34,9 @@ export default function ImageEditCanvasPanel(props: ImageEditCanvasPanelProps) {
     selection,
     selectionStyle,
     selectionPixelInfo,
+    markupEnabled,
+    hasMarkupInk,
+    markupCanvasRef,
     displayRect,
     panelRef,
     imageRef,
@@ -109,12 +115,26 @@ export default function ImageEditCanvasPanel(props: ImageEditCanvasPanelProps) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
         >
-          {!selection && (
-            <div className="pointer-events-none absolute inset-0 rounded-2xl border border-dashed border-white/25">
+          {markupEnabled && (
+            <canvas
+              ref={markupCanvasRef}
+              className="pointer-events-none absolute inset-0 h-full w-full rounded-2xl"
+            />
+          )}
+          {markupEnabled ? (
+            <div className="pointer-events-none absolute inset-0 rounded-2xl border border-dashed border-red-300/40">
               <div className="absolute left-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs text-white/90 backdrop-blur">
-                拖拽框出要修改的区域；直接应用则按整图编辑
+                {hasMarkupInk ? '已绘制标注，可继续涂抹或清空重画' : '用红色画笔在图上涂抹要修改的区域'}
               </div>
             </div>
+          ) : (
+            !selection && (
+              <div className="pointer-events-none absolute inset-0 rounded-2xl border border-dashed border-white/25">
+                <div className="absolute left-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs text-white/90 backdrop-blur">
+                  拖拽框出要修改的区域；直接应用则按整图编辑
+                </div>
+              </div>
+            )
           )}
           {selectionStyle && (
             <div

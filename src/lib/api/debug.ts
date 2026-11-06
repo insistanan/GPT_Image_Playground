@@ -222,5 +222,6 @@ function buildLocalDebugRequestSnapshot(opts: CallApiOptions): ApiDebugRequestSn
     params: opts.params,
     inputImages: opts.inputImageDataUrls.map((value, index) => summarizeInputImageForDebug(value, index)),
     editMask: summarizeMaskForDebug(opts.editMaskDataUrl),
+    markup: summarizeMaskForDebug(opts.editMarkupDataUrl),
   }
 }

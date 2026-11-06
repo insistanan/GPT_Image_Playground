@@ -33,6 +33,29 @@ describe('paramCompatibility', () => {
     expect(next.background).toBe('transparent')
   })
 
+  it('switches transparent gif to opaque background', () => {
+    const next = normalizeParamsForSettings({
+      ...DEFAULT_PARAMS,
+      background: 'transparent',
+      output_format: 'gif',
+    }, DEFAULT_SETTINGS)
+    expect(next.output_format).toBe('gif')
+    expect(next.background).toBe('opaque')
+  })
+
+  it('forces single image, no compression and opaque background for svg', () => {
+    const next = normalizeParamsForSettings({
+      ...DEFAULT_PARAMS,
+      output_format: 'svg',
+      n: 4,
+      output_compression: 80,
+      background: 'transparent',
+    }, DEFAULT_SETTINGS)
+    expect(next.n).toBe(1)
+    expect(next.output_compression).toBe(null)
+    expect(next.background).toBe('opaque')
+  })
+
   it('clears input_fidelity when there are no input images', () => {
     const next = normalizeParamsForSettings({
       ...DEFAULT_PARAMS,

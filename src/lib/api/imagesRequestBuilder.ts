@@ -1,10 +1,10 @@
 import { buildRequestUrl } from './config'
-import { appendSharedImageParams } from './sharedImageParams'
+import { appendSafetyIdentifier, appendSharedImageParams } from './sharedImageParams'
 import { createApiError, dataUrlToBlob, isDataUrl, isHttpUrl } from './imageTransforms'
 import type { CallApiOptions, ImagesRequestPlan, SharedRequestContext } from './types'
 
 interface BuildImagesRequestSpecOptions {
-  opts: Pick<CallApiOptions, 'settings' | 'prompt' | 'params' | 'inputImageDataUrls' | 'editMaskDataUrl'>
+  opts: Pick<CallApiOptions, 'settings' | 'prompt' | 'params' | 'inputImageDataUrls' | 'editMaskDataUrl' | 'editMarkupDataUrl'>
   plan: ImagesRequestPlan
   ctx: SharedRequestContext
 }
@@ -28,12 +28,14 @@ function appendCommonEditFormFields(
   formData.append('quality', params.quality)
   formData.append('output_format', params.output_format)
   formData.append('moderation', params.moderation)
-  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_format !== 'svg' && params.output_compression != null) {
     formData.append('output_compression', String(params.output_compression))
   }
+  appendSafetyIdentifier(formData, settings)
   appendSharedImageParams(formData, params, {
     isEdit: true,
     stream: plan.transport === 'stream',
+    partialImages: settings.partialImages,
   })
   if (plan.transport === 'stream') {
     formData.append('stream', 'true')
@@ -55,11 +57,13 @@ function buildImagesGenerateRequestSpec({
     moderation: params.moderation,
   }
 
-  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_format !== 'svg' && params.output_compression != null) {
     body.output_compression = params.output_compression
   }
+  appendSafetyIdentifier(body, settings)
   appendSharedImageParams(body, params, {
     stream: plan.transport === 'stream',
+    partialImages: settings.partialImages,
   })
   if (plan.transport === 'stream') {
     body.stream = true
@@ -87,7 +91,7 @@ async function buildImagesEditJsonRequestSpec({
   plan,
   ctx,
 }: BuildImagesRequestSpecOptions): Promise<ImagesRequestSpec> {
-  const { settings, prompt, params, inputImageDataUrls, editMaskDataUrl } = opts
+  const { settings, prompt, params, inputImageDataUrls, editMaskDataUrl, editMarkupDataUrl } = opts
   const images = inputImageDataUrls.map((value) => {
     if (!isDataUrl(value) && !isHttpUrl(value)) {
       throw createApiError('编辑参考图格式不受支持，请使用本地图片或公网图片 URL')
@@ -105,12 +109,14 @@ async function buildImagesEditJsonRequestSpec({
     moderation: params.moderation,
   }
 
-  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_format !== 'svg' && params.output_compression != null) {
     body.output_compression = params.output_compression
   }
+  appendSafetyIdentifier(body, settings)
   appendSharedImageParams(body, params, {
     isEdit: true,
     stream: plan.transport === 'stream',
+    partialImages: settings.partialImages,
   })
   if (editMaskDataUrl) {
     if (!isDataUrl(editMaskDataUrl) && !isHttpUrl(editMaskDataUrl)) {
@@ -118,6 +124,14 @@ async function buildImagesEditJsonRequestSpec({
     }
     body.mask = {
       image_url: editMaskDataUrl,
+    }
+  }
+  if (editMarkupDataUrl) {
+    if (!isDataUrl(editMarkupDataUrl) && !isHttpUrl(editMarkupDataUrl)) {
+      throw createApiError('编辑标注格式不受支持，请使用本地图片或公网图片 URL')
+    }
+    body.markup = {
+      image_url: editMarkupDataUrl,
     }
   }
   if (plan.transport === 'stream') {
@@ -131,6 +145,7 @@ async function buildImagesEditJsonRequestSpec({
       ...body,
       imageCount: inputImageDataUrls.length,
       hasMask: Boolean(editMaskDataUrl),
+      hasMarkup: Boolean(editMarkupDataUrl),
       bodyMode: plan.bodyMode,
     },
     requestInit: {
@@ -151,7 +166,7 @@ async function buildImagesEditMultipartRequestSpec({
   plan,
   ctx,
 }: BuildImagesRequestSpecOptions): Promise<ImagesRequestSpec> {
-  const { settings, prompt, params, inputImageDataUrls, editMaskDataUrl } = opts
+  const { settings, prompt, params, inputImageDataUrls, editMaskDataUrl, editMarkupDataUrl } = opts
   const formData = new FormData()
   appendCommonEditFormFields(formData, opts, plan)
 
@@ -164,6 +179,10 @@ async function buildImagesEditMultipartRequestSpec({
   if (editMaskDataUrl) {
     const maskBlob = await dataUrlToBlob(editMaskDataUrl)
     formData.append('mask', maskBlob, 'mask.png')
+  }
+  if (editMarkupDataUrl) {
+    const markupBlob = await dataUrlToBlob(editMarkupDataUrl)
+    formData.append('markup', markupBlob, 'markup.png')
   }
 
   return {
@@ -180,7 +199,7 @@ async function buildImagesEditMultipartRequestSpec({
       background: params.background,
       input_fidelity: params.input_fidelity ?? undefined,
       output_compression:
-        params.output_format !== 'png' && params.output_format !== 'gif'
+        params.output_format !== 'png' && params.output_format !== 'gif' && params.output_format !== 'svg'
           ? params.output_compression
           : undefined,
       frame_count: params.output_format === 'gif' ? params.frame_count ?? undefined : undefined,
@@ -188,8 +207,9 @@ async function buildImagesEditMultipartRequestSpec({
         params.output_format === 'gif' ? params.frame_duration_ms ?? undefined : undefined,
       imageCount: inputImageDataUrls.length,
       hasMask: Boolean(editMaskDataUrl),
+      hasMarkup: Boolean(editMarkupDataUrl),
       stream: plan.transport === 'stream',
-      partial_images: plan.transport === 'stream' ? 1 : undefined,
+      partial_images: plan.transport === 'stream' ? settings.partialImages : undefined,
       bodyMode: plan.bodyMode,
     },
     requestInit: {

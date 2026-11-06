@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { normalizeBaseUrl, readClientDevProxyConfig } from '@/lib/devProxy'
 import { useStore, exportData, importData, clearAllData } from '@/store'
 import { DEFAULT_SETTINGS, type AppSettings } from '@/types'
+import { clampPartialImages } from '@/lib/capabilities'
 import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
 import ApiSettingsSection from './ApiSettingsSection'
 import DataManagementSection from './DataManagementSection'
@@ -14,6 +15,7 @@ function normalizeSettingsDraft(settings: AppSettings): AppSettings {
   return {
     ...settings,
     requestMode: normalizeRuntimeRequestMode(settings.requestMode),
+    partialImages: clampPartialImages(settings.partialImages),
   }
 }
 
@@ -63,6 +65,8 @@ export default function SettingsModal() {
         timeout: Number(nextDraft.timeout) || DEFAULT_SETTINGS.timeout,
         apiProtocol: nextDraft.apiProtocol || DEFAULT_SETTINGS.apiProtocol,
         requestMode: normalizeRuntimeRequestMode(nextDraft.requestMode || DEFAULT_SETTINGS.requestMode),
+        safetyIdentifier: (nextDraft.safetyIdentifier ?? '').trim().slice(0, 128),
+        partialImages: clampPartialImages(nextDraft.partialImages),
       }
       setDraft(normalizedDraft)
       setSettings(normalizedDraft)

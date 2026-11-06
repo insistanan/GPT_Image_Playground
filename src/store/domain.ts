@@ -303,6 +303,7 @@ export function getTaskReferencedImageIds(task: TaskRecord): string[] {
     ...(task.inputImageIds || []),
     ...(task.outputImages || []),
     ...(task.editMaskImageId ? [task.editMaskImageId] : []),
+    ...(task.editMarkupImageId ? [task.editMarkupImageId] : []),
   ]
 }
 

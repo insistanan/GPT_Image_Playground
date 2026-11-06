@@ -60,6 +60,7 @@ interface GenerationTaskRecordInput {
   params: TaskParams
   inputImageIds: string[]
   editMaskImageId: string | null
+  editMarkupImageId: string | null
   editSourceImageId: string | null
   editSelection: ImageEditSelection | null
 }
@@ -80,6 +81,7 @@ export function createGenerationTaskRecord(input: GenerationTaskRecordInput): Ta
     params: input.params,
     inputImageIds: input.inputImageIds,
     editMaskImageId: input.editMaskImageId,
+    editMarkupImageId: input.editMarkupImageId,
     editSourceImageId: input.editSourceImageId,
     editSelection: input.editSelection,
     outputImages: [],
@@ -370,6 +372,7 @@ export function createSingleImageTaskRecord(
     params: { ...DEFAULT_PARAMS, n: 1 },
     inputImageIds: [],
     editMaskImageId: null,
+    editMarkupImageId: null,
     editSourceImageId: null,
     editSelection: null,
     outputImages: [imageId],

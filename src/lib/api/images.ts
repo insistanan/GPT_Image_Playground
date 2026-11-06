@@ -6,6 +6,7 @@ import {
   sanitizeDebugValue,
 } from './debug'
 import { createApiError, emitFinalImages } from './imageTransforms'
+import { normalizeModerationRejectionError } from './moderation'
 import { abortAwareFetch } from './abort'
 import {
   buildTaskResponseMetaFromCalls,
@@ -121,7 +122,9 @@ export async function callImagesApi(
       }
     } catch (error) {
       if (!planner.failAndAdvance(error)) {
-        throw isEdit ? normalizeImagesEditCompatibilityError(error) : error
+        throw normalizeModerationRejectionError(
+          isEdit ? normalizeImagesEditCompatibilityError(error) : error,
+        )
       }
     }
   }

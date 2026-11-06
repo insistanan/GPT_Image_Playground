@@ -1,6 +1,7 @@
 import type { ApiProtocol, AppliedTransportMeta, AppSettings, TaskResponseMeta } from '@/types'
 import { getResponsesTransportMode } from './config'
 import { isImageUrlDownloadError } from './imageDownload'
+import { isModerationRejectionError } from './moderation'
 import {
   buildStreamSupportKey,
   isStreamKnownUnsupported,
@@ -73,6 +74,11 @@ export function shouldBlockConcurrentNFallback(error: unknown): boolean {
 
 function shouldBlockTransportFallback(error: unknown): boolean {
   if (isImageUrlDownloadError(error)) {
+    return true
+  }
+
+  // 审核拒绝换传输方式或参数重试都不会成功，反而会重复请求。
+  if (isModerationRejectionError(error)) {
     return true
   }
 
@@ -153,8 +159,18 @@ function isExplicitStreamCompatibilityRejection(error: unknown): boolean {
     return false
   }
 
+  if (isModerationRejectionError(error)) {
+    return false
+  }
+
   const status = (error as ApiError).status
-  return status != null && [400, 404, 405, 415, 422, 501].includes(status)
+  if (status != null && [400, 404, 405, 415, 422, 501].includes(status)) {
+    return true
+  }
+
+  // 有些上游只返回“该模型不支持流式”的文本拒绝、没有携带 HTTP 状态码。
+  // 这类错误发生在生成前，降级到 JSON 不会重复出图，可以安全重试。
+  return isStreamUnsupportedError(error)
 }
 
 /**
@@ -181,7 +197,7 @@ export function shouldRetryResponsesWithCompatibility(error: unknown): boolean {
     return false
   }
 
-  if (isImageUrlDownloadError(error)) {
+  if (isImageUrlDownloadError(error) || isModerationRejectionError(error)) {
     return false
   }
 
@@ -288,12 +304,18 @@ export function buildResponsesRequestPlans(
   const hasReferenceImages = inputImages.length > 0
   const hasEditMask = Boolean(opts.editMaskDataUrl)
   const defaultInputPayloadMode: ResponsesInputPayloadMode = 'message-list'
-  const transports = getPreferredTransportSequence(opts.settings, 'responses')
+  // GIF / SVG 输出不支持流式与 partial，直接使用 JSON 传输，避免先撞一次 stream 再降级。
+  const jsonOnlyOutput =
+    opts.params.output_format === 'gif' || opts.params.output_format === 'svg'
+  const transports: ResponsesTransportKind[] = jsonOnlyOutput
+    ? ['json']
+    : getPreferredTransportSequence(opts.settings, 'responses')
   const streamKnownUnsupported = isStreamKnownUnsupported(
     buildStreamSupportKey(opts.settings, 'responses'),
   )
-  const primaryTransports: ResponsesTransportKind[] =
-    hasEditMask && getResponsesTransportMode(opts.settings) === 'auto' && !streamKnownUnsupported
+  const primaryTransports: ResponsesTransportKind[] = jsonOnlyOutput
+    ? ['json']
+    : hasEditMask && getResponsesTransportMode(opts.settings) === 'auto' && !streamKnownUnsupported
       ? ['json', 'stream']
       : transports
   const allowJsonCompatibilityFallback = getResponsesTransportMode(opts.settings) === 'auto'
@@ -366,7 +388,7 @@ export function buildResponsesRequestPlans(
 /**
  * 构建 Images 协议的 RequestPlan 列表。
  * 编辑场景下生成 json+multipart 两组 plan，按 transport 顺序排列。
- * GIF 输出不支持流式，因此只生成 JSON 传输的 plan，避免先撞一次 stream 再降级。
+ * GIF / SVG 输出不支持流式，因此只生成 JSON 传输的 plan，避免先撞一次 stream 再降级。
  */
 export function buildImagesRequestPlans(
   settings: AppSettings,
@@ -374,13 +396,13 @@ export function buildImagesRequestPlans(
   protocol: ApiProtocol = 'images',
 ): ImagesRequestPlan[] {
   const mode = getResponsesTransportMode(settings)
-  const gifOutput = options?.outputFormat === 'gif'
+  const jsonOnlyOutput = options?.outputFormat === 'gif' || options?.outputFormat === 'svg'
   const streamUnsupported =
     mode !== 'json' &&
-    (gifOutput || isStreamKnownUnsupported(buildStreamSupportKey(settings, protocol)))
+    (jsonOnlyOutput || isStreamKnownUnsupported(buildStreamSupportKey(settings, protocol)))
 
   if (!options?.isEdit) {
-    const transports = gifOutput ? (['json'] as const) : getPreferredTransportSequence(settings, protocol)
+    const transports = jsonOnlyOutput ? (['json'] as const) : getPreferredTransportSequence(settings, protocol)
     return transports.map((transport) => ({
       id: transport,
       transport,

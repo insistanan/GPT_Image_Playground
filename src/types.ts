@@ -17,6 +17,10 @@ export interface AppSettings {
   timeout: number
   apiProtocol: ApiProtocol
   requestMode: RequestMode
+  /** 上游安全标识，留空则不发送；官方限制最长 128 字符 */
+  safetyIdentifier: string
+  /** 流式生图时推送的半成品预览帧数，0-3；0 表示只在流结束时返回成图 */
+  partialImages: number
 }
 
 export type ApiProtocol = 'images' | 'responses'
@@ -112,6 +116,8 @@ export interface ImageEditSession {
   prompt: string
   params: TaskParams
   initialSelection?: ImageEditSelection | null
+  /** 重新打开编辑器时恢复的标注层（透明 PNG data URL） */
+  initialMarkupDataUrl?: string | null
 }
 
 export interface ProviderConfig extends AppSettings {
@@ -152,6 +158,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   timeout: 900,
   apiProtocol: 'images',
   requestMode: DEFAULT_REQUEST_MODE,
+  safetyIdentifier: '',
+  partialImages: 1,
 }
 
 // ===== 任务参数 =====
@@ -160,15 +168,20 @@ export type TaskQuality = 'auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 export type TaskBackground = 'auto' | 'opaque' | 'transparent'
 export type TaskInputFidelity = 'high' | 'low'
 
+export type TaskOutputFormat = 'png' | 'jpeg' | 'webp' | 'gif' | 'svg'
+export type TaskComplexity = 'low' | 'medium' | 'high'
+
 export interface TaskParams {
   size: string
   quality: TaskQuality
-  output_format: 'png' | 'jpeg' | 'webp' | 'gif'
+  output_format: TaskOutputFormat
   output_compression: number | null
   moderation: 'auto' | 'low'
   n: number
   background: TaskBackground
   input_fidelity?: TaskInputFidelity | null
+  /** 生成复杂度，null 表示不指定、跟随上游默认值 */
+  complexity: TaskComplexity | null
   /** GIF 动图帧数，null 表示不指定、跟随上游默认值 */
   frame_count: number | null
   /** GIF 每帧时长（毫秒），null 表示不指定、跟随上游默认值 */
@@ -216,6 +229,7 @@ export interface TaskErrorDebugRequestSnapshot {
   params: TaskParams
   inputImages: TaskErrorDebugImageSummary[]
   editMask?: (TaskErrorDebugImageSummary & { present: boolean }) | null
+  markup?: (TaskErrorDebugImageSummary & { present: boolean }) | null
 }
 
 export interface TaskErrorDebugRequestLogEntry {
@@ -264,6 +278,8 @@ export interface InputImage {
   dataUrl: string
   /** 局部编辑时使用的蒙版图，仅在提交阶段参与请求 */
   maskDataUrl?: string | null
+  /** 局部编辑时使用的标注层（透明 PNG），与蒙版互斥，仅 Images 编辑端点支持 */
+  markupDataUrl?: string | null
   /** 蒙版对应的选区，使用 0-1 相对坐标 */
   editSelection?: ImageEditSelection | null
   /** 追踪它来自哪条任务/哪张输出图，方便回到编辑器继续调整 */
@@ -305,6 +321,8 @@ export interface TaskRecord {
   inputImageIds: string[]
   /** 局部编辑蒙版图片 id */
   editMaskImageId?: string | null
+  /** 局部编辑标注层图片 id（与 editMaskImageId 互斥） */
+  editMarkupImageId?: string | null
   /** 蒙版对应的输出图 id */
   editSourceImageId?: string | null
   /** 蒙版选区，使用 0-1 相对坐标 */

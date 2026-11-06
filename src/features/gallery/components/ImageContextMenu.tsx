@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useStore } from '@/store'
 import { copyImageToClipboard } from '@/lib/clipboardImage'
+import { getImageExtensionFromMimeType } from '@/lib/imageMime'
 
 export default function ImageContextMenu() {
   const [menuInfo, setMenuInfo] = useState<{ src: string; x: number; y: number } | null>(null)
@@ -79,7 +80,7 @@ export default function ImageContextMenu() {
     try {
       const res = await fetch(src)
       const blob = await res.blob()
-      const ext = blob.type.split('/')[1] || 'png'
+      const ext = getImageExtensionFromMimeType(blob.type, 'png')
       const fileName = `image-${Date.now()}.${ext}`
 
       // 移动端优先走 Web Share API：<a download> 在 iOS Safari 上会被忽略，

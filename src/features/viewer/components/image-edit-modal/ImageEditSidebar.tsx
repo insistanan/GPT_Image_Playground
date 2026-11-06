@@ -17,10 +17,15 @@ interface ImageEditSidebarProps {
   currentImageNumber: number
   displayImageCount: number
   selection: ImageEditSelection | null
+  markupSupported: boolean
+  markupEnabled: boolean
+  hasMarkupInk: boolean
   isSubmitting: boolean
   onClose: () => void
   onProviderChange: (value: string) => void
   onPromptChange: (value: string) => void
+  onToggleMarkup: () => void
+  onClearMarkup: () => void
   onClearSelection: () => void
   onRestorePrompt: () => void
   onApplyToInput: () => void
@@ -38,16 +43,21 @@ export default function ImageEditSidebar(props: ImageEditSidebarProps) {
     currentImageNumber,
     displayImageCount,
     selection,
+    markupSupported,
+    markupEnabled,
+    hasMarkupInk,
     isSubmitting,
     onClose,
     onProviderChange,
     onPromptChange,
+    onToggleMarkup,
+    onClearMarkup,
     onClearSelection,
     onRestorePrompt,
     onApplyToInput,
     onSubmit,
   } = props
-  const actionsDisabled = !naturalSize || isSubmitting
+  const actionsDisabled = !naturalSize || isSubmitting || (markupEnabled && !hasMarkupInk)
 
   return (
     <div className="w-full overflow-y-auto border-t border-white/8 bg-[#17171b] p-5 custom-scrollbar lg:w-[26rem] lg:border-l lg:border-t-0">
@@ -94,6 +104,47 @@ export default function ImageEditSidebar(props: ImageEditSidebarProps) {
           />
         </div>
 
+        <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs text-white/45">标注（markup）</div>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">
+                直接在图上涂抹红色标注，随输入图一起提交，比框选更适合复杂局部修改。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onToggleMarkup}
+              disabled={!markupSupported || !naturalSize}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs transition ${
+                markupEnabled
+                  ? 'border-red-400/40 bg-red-400/15 text-red-200 hover:bg-red-400/25'
+                  : 'border-white/10 text-white/70 hover:bg-white/8 hover:text-white'
+              } disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              {markupEnabled ? '关闭标注' : '开启标注'}
+            </button>
+          </div>
+          {!markupSupported && (
+            <p className="mt-2 text-xs leading-relaxed text-amber-300/85">
+              当前供应商使用 Responses 协议，标注仅支持 Images 编辑端点；可切换供应商或改用框选。
+            </p>
+          )}
+          {markupSupported && markupEnabled && (
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-white/55">
+              <span>{hasMarkupInk ? '已绘制标注' : '尚未绘制标注，请先在图上涂抹'}</span>
+              <button
+                type="button"
+                onClick={onClearMarkup}
+                disabled={!hasMarkupInk}
+                className="rounded-full border border-white/10 px-3 py-1.5 text-white/70 transition hover:bg-white/8 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                清空标注
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3 text-xs text-white/55">
           <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
             <div className="text-white/35">来源任务</div>
@@ -106,8 +157,10 @@ export default function ImageEditSidebar(props: ImageEditSidebarProps) {
             </div>
           </div>
           <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
-            <div className="text-white/35">选区状态</div>
-            <div className="mt-1 text-white/80">{selection ? '已选定局部区域' : '未选区，将整图编辑'}</div>
+            <div className="text-white/35">编辑范围</div>
+            <div className="mt-1 text-white/80">
+              {markupEnabled ? '标注模式' : selection ? '已选定局部区域' : '未选区，将整图编辑'}
+            </div>
           </div>
         </div>
 

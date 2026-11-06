@@ -1,7 +1,7 @@
 import type { AppSettings, ApiProtocol, RequestMode } from '@/types'
 import type { DevProxyConfig } from '@/lib/devProxy'
 import Select from '@/shared/components/Select'
-import { API_PROTOCOL_OPTIONS, REQUEST_MODE_OPTIONS } from './options'
+import { API_PROTOCOL_OPTIONS, PARTIAL_IMAGES_OPTIONS, REQUEST_MODE_OPTIONS } from './options'
 import { adjustSettingsForProtocolChange } from '@/lib/capabilities'
 import { fieldClassName } from './apiSettingsShared'
 
@@ -63,6 +63,20 @@ export default function ApiRequestSettings({
               </div>
             )
           ) : null}
+        </div>
+      </label>
+
+      <label className="block">
+        <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">流式预览帧数 (partial_images)</span>
+        <Select
+          value={draft.partialImages}
+          onChange={(value) => commitSettings({ ...draft, partialImages: Number(value) })}
+          options={PARTIAL_IMAGES_OPTIONS}
+          className={fieldClassName}
+        />
+        <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+          <div>仅流式生图生效，0-3 张；0 表示不推送半成品预览，只返回最终图。</div>
+          <div>GIF / SVG 输出会忽略该参数。</div>
         </div>
       </label>
     </>

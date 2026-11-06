@@ -1,9 +1,11 @@
-import type { AppSettings, TaskBackground, TaskInputFidelity, TaskParams, TaskQuality } from '@/types'
+import type { AppSettings, TaskBackground, TaskComplexity, TaskInputFidelity, TaskParams, TaskQuality } from '@/types'
 import { getImageGenerationModel, isGptImage25Model } from './imageModels'
 import { normalizeImageSize } from '@/lib/size'
 
 export const MAX_OPENAI_OUTPUT_IMAGES = 10
 export const DEFAULT_STREAM_PARTIAL_IMAGES = 1
+export const MIN_PARTIAL_IMAGES = 0
+export const MAX_PARTIAL_IMAGES = 3
 
 export const BASE_QUALITY_VALUES = ['auto', 'low', 'medium', 'high'] as const
 export const GPT_IMAGE_25_QUALITY_VALUES = ['auto', 'low', 'medium', 'high', 'xhigh', 'max'] as const
@@ -54,6 +56,14 @@ export function clampOutputImageCount(n: number, limit = MAX_OPENAI_OUTPUT_IMAGE
   return Math.min(limit, Math.max(1, Math.round(n)))
 }
 
+/** 流式预览帧数归一化：非法值退回默认值，合法值取整并夹到 0-3。 */
+export function clampPartialImages(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_STREAM_PARTIAL_IMAGES
+  }
+  return Math.min(MAX_PARTIAL_IMAGES, Math.max(MIN_PARTIAL_IMAGES, Math.round(value)))
+}
+
 /**
  * GIF 帧参数归一化：空值保留“跟随上游默认值”，有值则取整并夹到合法区间。
  * 非 GIF 输出一律清空，避免把不适用的参数带到请求里。
@@ -98,6 +108,10 @@ export function isTaskInputFidelity(value: unknown): value is TaskInputFidelity 
   return value === 'high' || value === 'low'
 }
 
+export function isTaskComplexity(value: unknown): value is TaskComplexity {
+  return value === 'low' || value === 'medium' || value === 'high'
+}
+
 export function getChangedParams(current: TaskParams, next: TaskParams): Partial<TaskParams> {
   const patch: Partial<TaskParams> = {}
   for (const key of Object.keys(next) as Array<keyof TaskParams>) {
@@ -120,6 +134,7 @@ export function normalizeParamsForSettings(
     quality: isTaskQuality(params.quality) ? params.quality : FALLBACK_QUALITY,
     background: isTaskBackground(params.background) ? params.background : FALLBACK_BACKGROUND,
     input_fidelity: isTaskInputFidelity(params.input_fidelity) ? params.input_fidelity : null,
+    complexity: isTaskComplexity(params.complexity) ? params.complexity : null,
     n: clampOutputImageCount(params.n, capabilities.maxOutputImages),
     ...normalizeGIFParams(params, settings.apiProtocol === 'responses'),
   }
@@ -128,13 +143,26 @@ export function normalizeParamsForSettings(
     nextParams.quality = 'high'
   }
 
-  if (nextParams.output_format === 'png' || nextParams.output_format === 'gif') {
+  if (nextParams.output_format === 'png' || nextParams.output_format === 'gif' || nextParams.output_format === 'svg') {
     nextParams.output_compression = null
+  }
+
+  // SVG 输出只支持单张、无压缩、无透明背景。
+  if (nextParams.output_format === 'svg') {
+    nextParams.n = 1
+    if (nextParams.background === 'transparent') {
+      nextParams.background = 'opaque'
+    }
   }
 
   if (nextParams.background === 'transparent' && nextParams.output_format === 'jpeg') {
     nextParams.output_format = 'png'
     nextParams.output_compression = null
+  }
+
+  // 透明背景只支持 PNG/WebP，GIF 动图统一退回不透明，避免请求被上游拒绝。
+  if (nextParams.background === 'transparent' && nextParams.output_format === 'gif') {
+    nextParams.background = 'opaque'
   }
 
   if (!options.hasInputImages) {

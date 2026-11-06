@@ -125,7 +125,8 @@ describe("planner blocks retry on image download errors", () => {
     expect(shouldRetryResponsesWithCompatibility(error)).toBe(false)
   })
 
-  it("still allows stream->json fallback for server errors", () => {
-    expect(shouldRetryImagesPlan(new Error("HTTP 500 error"), streamPlan, jsonPlan)).toBe(true)
+  it("still allows stream->json fallback for explicit compatibility rejections", () => {
+    const error = Object.assign(new Error("HTTP 400 error"), { status: 400 })
+    expect(shouldRetryImagesPlan(error, streamPlan, jsonPlan)).toBe(true)
   })
 })

@@ -74,6 +74,15 @@ describe("buildImagesRequestPlans", () => {
     expect(editPlans.map((plan) => plan.transport)).toEqual(["json", "json"])
     expect(editPlans.map((plan) => plan.bodyMode)).toEqual(["json", "multipart"])
   })
+
+  it("forces json-only plans for svg output", () => {
+    const plans = buildImagesRequestPlans(fakeSettings(), {
+      isEdit: false,
+      outputFormat: "svg",
+    })
+    expect(plans).toHaveLength(1)
+    expect(plans[0].transport).toBe("json")
+  })
 })
 
 describe("shouldRetryImagesPlan", () => {
@@ -130,6 +139,13 @@ describe("buildResponsesRequestPlans", () => {
     const plans = buildResponsesRequestPlans(fakeCallApiOptions(), [] as any)
     expect(plans.length).toBeGreaterThan(0)
     expect(plans[0].id).toContain("official")
+  })
+
+  it("forces json-only plans for gif output", () => {
+    const opts = fakeCallApiOptions()
+    opts.params = { ...opts.params, output_format: "gif" }
+    const plans = buildResponsesRequestPlans(opts, [] as any)
+    expect(plans.every((plan) => plan.transport === "json")).toBe(true)
   })
 })
 
