@@ -366,18 +366,21 @@ export function buildResponsesRequestPlans(
 /**
  * 构建 Images 协议的 RequestPlan 列表。
  * 编辑场景下生成 json+multipart 两组 plan，按 transport 顺序排列。
+ * GIF 输出不支持流式，因此只生成 JSON 传输的 plan，避免先撞一次 stream 再降级。
  */
 export function buildImagesRequestPlans(
   settings: AppSettings,
-  options?: { isEdit?: boolean },
+  options?: { isEdit?: boolean; outputFormat?: string },
   protocol: ApiProtocol = 'images',
 ): ImagesRequestPlan[] {
   const mode = getResponsesTransportMode(settings)
+  const gifOutput = options?.outputFormat === 'gif'
   const streamUnsupported =
-    mode !== 'json' && isStreamKnownUnsupported(buildStreamSupportKey(settings, protocol))
+    mode !== 'json' &&
+    (gifOutput || isStreamKnownUnsupported(buildStreamSupportKey(settings, protocol)))
 
   if (!options?.isEdit) {
-    const transports = getPreferredTransportSequence(settings, protocol)
+    const transports = gifOutput ? (['json'] as const) : getPreferredTransportSequence(settings, protocol)
     return transports.map((transport) => ({
       id: transport,
       transport,
@@ -484,7 +487,7 @@ export function createResponsesPlanner(
 
 export function createImagesPlanner(
   settings: AppSettings,
-  options?: { isEdit?: boolean },
+  options?: { isEdit?: boolean; outputFormat?: string },
 ): PlannerSession<ImagesRequestPlan> {
   const requested = getResponsesTransportMode(settings)
   const streamSupportKey = buildStreamSupportKey(settings, 'images')

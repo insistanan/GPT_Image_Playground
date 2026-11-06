@@ -10,6 +10,15 @@ export const GPT_IMAGE_25_QUALITY_VALUES = ['auto', 'low', 'medium', 'high', 'xh
 export const BACKGROUND_VALUES = ['auto', 'opaque', 'transparent'] as const
 export const INPUT_FIDELITY_VALUES = ['high', 'low'] as const
 
+/** GIF 输出参数范围，与 Images / Responses 官方约束保持一致。 */
+export const MIN_GIF_FRAME_COUNT = 2
+export const MAX_GIF_FRAME_COUNT = 16
+export const MIN_GIF_FRAME_DURATION_MS = 20
+/** Responses 图片工具对每帧时长有上限，Images API 只限制下限。 */
+export const MAX_RESPONSES_GIF_FRAME_DURATION_MS = 2000
+export const DEFAULT_GIF_FRAME_COUNT = 9
+export const DEFAULT_GIF_FRAME_DURATION_MS = 200
+
 const FALLBACK_SIZE = 'auto'
 const FALLBACK_QUALITY: TaskQuality = 'auto'
 const FALLBACK_BACKGROUND: TaskBackground = 'auto'
@@ -43,6 +52,31 @@ export function getOutputImageLimitForSettings(
 export function clampOutputImageCount(n: number, limit = MAX_OPENAI_OUTPUT_IMAGES): number {
   if (!Number.isFinite(n)) return FALLBACK_N
   return Math.min(limit, Math.max(1, Math.round(n)))
+}
+
+/**
+ * GIF 帧参数归一化：空值保留“跟随上游默认值”，有值则取整并夹到合法区间。
+ * 非 GIF 输出一律清空，避免把不适用的参数带到请求里。
+ */
+function normalizeGIFParams(
+  params: TaskParams,
+  responses: boolean,
+): Pick<TaskParams, 'frame_count' | 'frame_duration_ms'> {
+  if (params.output_format !== 'gif') {
+    return { frame_count: null, frame_duration_ms: null }
+  }
+
+  const frameCount =
+    typeof params.frame_count === 'number' && Number.isFinite(params.frame_count)
+      ? Math.min(MAX_GIF_FRAME_COUNT, Math.max(MIN_GIF_FRAME_COUNT, Math.round(params.frame_count)))
+      : null
+  const maxDuration = responses ? MAX_RESPONSES_GIF_FRAME_DURATION_MS : Number.POSITIVE_INFINITY
+  const frameDuration =
+    typeof params.frame_duration_ms === 'number' && Number.isFinite(params.frame_duration_ms)
+      ? Math.max(MIN_GIF_FRAME_DURATION_MS, Math.min(maxDuration, Math.round(params.frame_duration_ms)))
+      : null
+
+  return { frame_count: frameCount, frame_duration_ms: frameDuration }
 }
 
 export function isTaskQuality(value: unknown): value is TaskQuality {
@@ -87,13 +121,14 @@ export function normalizeParamsForSettings(
     background: isTaskBackground(params.background) ? params.background : FALLBACK_BACKGROUND,
     input_fidelity: isTaskInputFidelity(params.input_fidelity) ? params.input_fidelity : null,
     n: clampOutputImageCount(params.n, capabilities.maxOutputImages),
+    ...normalizeGIFParams(params, settings.apiProtocol === 'responses'),
   }
 
   if ((nextParams.quality === 'xhigh' || nextParams.quality === 'max') && !capabilities.supportsXHighQuality) {
     nextParams.quality = 'high'
   }
 
-  if (nextParams.output_format === 'png') {
+  if (nextParams.output_format === 'png' || nextParams.output_format === 'gif') {
     nextParams.output_compression = null
   }
 

@@ -32,7 +32,7 @@ function fakeSettings(overrides: Record<string, unknown> = {}) {
 function fakeCallApiOptions(overrides: Record<string, unknown> = {}) {
   return {
     settings: fakeSettings(overrides),
-    params: { n: 1, size: "1024x1024", quality: "high", output_format: "png", output_compression: null, moderation: "auto", background: "auto", input_fidelity: null },
+    params: { n: 1, size: "1024x1024", quality: "high", output_format: "png", output_compression: null, moderation: "auto", background: "auto", input_fidelity: null, frame_count: null, frame_duration_ms: null },
     prompt: "test prompt",
     editMaskDataUrl: null,
   } as any
@@ -57,6 +57,22 @@ describe("buildImagesRequestPlans", () => {
     const plans = buildImagesRequestPlans(fakeSettings({ responsesTransport: "json" }), { isEdit: false })
     expect(plans.length).toBe(1)
     expect(plans[0].transport).toBe("json")
+  })
+
+  it("forces json-only plans for gif output", () => {
+    const generatePlans = buildImagesRequestPlans(fakeSettings(), {
+      isEdit: false,
+      outputFormat: "gif",
+    })
+    expect(generatePlans).toHaveLength(1)
+    expect(generatePlans[0].transport).toBe("json")
+
+    const editPlans = buildImagesRequestPlans(fakeSettings(), {
+      isEdit: true,
+      outputFormat: "gif",
+    })
+    expect(editPlans.map((plan) => plan.transport)).toEqual(["json", "json"])
+    expect(editPlans.map((plan) => plan.bodyMode)).toEqual(["json", "multipart"])
   })
 })
 

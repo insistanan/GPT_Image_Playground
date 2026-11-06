@@ -66,8 +66,16 @@ function buildCallApiOptions(intent: CallImageApiIntent): CallApiOptions {
   }
 }
 
+function validateRequestParams(opts: CallApiOptions): void {
+  // GIF 输出不支持蒙版，提前报错避免按不同传输方式反复重试同一个不可能成功的请求。
+  if (opts.params.output_format === 'gif' && opts.editMaskDataUrl != null) {
+    throw createApiError('GIF 输出不支持蒙版，请取消蒙版或改用 PNG/JPEG/WebP')
+  }
+}
+
 function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
   const baseOpts = buildCallApiOptions(intent)
+  validateRequestParams(baseOpts)
   const mime = MIME_MAP[baseOpts.params.output_format] || 'image/png'
   const proxyConfig = readClientDevProxyConfig()
   const forceProxy = import.meta.env.DEV && baseOpts.settings.requestMode === 'local_proxy'

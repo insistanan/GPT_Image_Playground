@@ -123,6 +123,12 @@ export default function DetailParamsSection(props: DetailParamsSectionProps) {
         {!isImageTask && task.params.output_compression != null
           ? renderValueCard('压缩率', String(task.params.output_compression))
           : null}
+        {!isImageTask && task.params.output_format === 'gif' && task.params.frame_count != null
+          ? renderValueCard('GIF 帧数', String(task.params.frame_count))
+          : null}
+        {!isImageTask && task.params.output_format === 'gif' && task.params.frame_duration_ms != null
+          ? renderValueCard('每帧时长', `${task.params.frame_duration_ms} 毫秒`)
+          : null}
       </div>
     </>
   )

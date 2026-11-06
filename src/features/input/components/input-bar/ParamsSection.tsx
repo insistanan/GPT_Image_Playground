@@ -10,6 +10,9 @@ import ParamPopoverChip, {
 } from '@/shared/components/ParamPopoverChip'
 import {
   BACKGROUND_OPTIONS,
+  GIF_FRAME_COUNT_HINT,
+  GIF_FRAME_DEFAULTS,
+  GIF_FRAME_DURATION_HINT,
   INPUT_FIDELITY_OPTIONS,
   MODERATION_OPTIONS,
   OUTPUT_FORMAT_OPTIONS,
@@ -26,6 +29,8 @@ interface ParamsSectionProps {
   hasInputImages: boolean
   outputCompressionInput: string
   nInput: string
+  frameCountInput: string
+  frameDurationInput: string
   onActiveProviderChange: (providerId: string) => void
   onOpenSizePicker: () => void
   onSetParams: (params: Partial<TaskParams>) => void
@@ -33,11 +38,18 @@ interface ParamsSectionProps {
   onCommitOutputCompression: () => void
   onNInputChange: (value: string) => void
   onCommitN: () => void
+  onFrameCountInputChange: (value: string) => void
+  onCommitFrameCount: () => void
+  onFrameDurationInputChange: (value: string) => void
+  onCommitFrameDuration: () => void
 }
 
 const CHIP_ROW_CLASS = 'flex flex-wrap gap-1.5'
 const PANEL_LABEL_CLASS = 'mb-1.5 block text-[11px] font-medium text-gray-500 dark:text-gray-400'
 const CHIP_BUTTON_CLASS = `${CHIP_BASE_CLASS} ${CHIP_IDLE_CLASS} inline-flex items-center justify-between gap-1`
+const PARAM_INPUT_CLASS =
+  'w-full rounded-xl border border-gray-200/60 bg-white/70 px-3 py-2 text-xs shadow-sm outline-none dark:border-white/[0.08] dark:bg-white/[0.03]'
+const PARAM_HINT_CLASS = 'mt-1 block text-[10px] text-gray-400 dark:text-gray-500'
 
 function getBackgroundLabel(value: TaskParams['background']) {
   return BACKGROUND_OPTIONS.find((option) => option.value === value)?.label ?? value
@@ -127,6 +139,8 @@ export default function ParamsSection({
   hasInputImages,
   outputCompressionInput,
   nInput,
+  frameCountInput,
+  frameDurationInput,
   onActiveProviderChange,
   onOpenSizePicker,
   onSetParams,
@@ -134,7 +148,13 @@ export default function ParamsSection({
   onCommitOutputCompression,
   onNInputChange,
   onCommitN,
+  onFrameCountInputChange,
+  onCommitFrameCount,
+  onFrameDurationInputChange,
+  onCommitFrameDuration,
 }: ParamsSectionProps) {
+  const isGif = params.output_format === 'gif'
+  const compressionDisabled = params.output_format === 'png' || isGif
   const backgroundOptions = BACKGROUND_OPTIONS.map((option) =>
     option.value === 'transparent' && params.output_format === 'jpeg' ? { ...option, disabled: true } : option,
   )
@@ -143,8 +163,17 @@ export default function ParamsSection({
     params.background !== 'auto' ||
     params.moderation !== 'auto' ||
     Boolean(params.input_fidelity)
+  const gifSummary = isGif
+    ? [
+        params.frame_count == null ? null : `${params.frame_count} 帧`,
+        params.frame_duration_ms == null ? null : `${params.frame_duration_ms}ms/帧`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null
   const moreSummary = [
     params.output_format.toUpperCase(),
+    gifSummary,
     params.background !== 'auto' ? getBackgroundLabel(params.background) : null,
     params.moderation !== 'auto' ? params.moderation : null,
     params.input_fidelity ? getInputFidelityLabel(params.input_fidelity) : null,
@@ -198,24 +227,77 @@ export default function ParamsSection({
               <SegmentedControl
                 ariaLabel="输出格式"
                 value={params.output_format}
-                onChange={(value) => onSetParams({ output_format: value })}
+                onChange={(value) => {
+                  const patch: Partial<TaskParams> = { output_format: value }
+                  // 切到 GIF 时填入建议帧参数，用户仍可在下方清空改为跟随上游。
+                  if (value === 'gif') {
+                    if (params.frame_count == null) patch.frame_count = GIF_FRAME_DEFAULTS.frameCount
+                    if (params.frame_duration_ms == null) {
+                      patch.frame_duration_ms = GIF_FRAME_DEFAULTS.frameDurationMs
+                    }
+                  }
+                  onSetParams(patch)
+                }}
                 options={OUTPUT_FORMAT_OPTIONS}
               />
             </FieldGroup>
+
+            {isGif ? (
+              <>
+                <FieldGroup label="GIF 帧数">
+                  <input
+                    value={frameCountInput}
+                    onChange={(event) => onFrameCountInputChange(event.target.value)}
+                    onBlur={onCommitFrameCount}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur()
+                    }}
+                    type="number"
+                    min={2}
+                    max={16}
+                    step={1}
+                    inputMode="numeric"
+                    placeholder="留空跟随上游"
+                    aria-label="GIF 帧数"
+                    className={PARAM_INPUT_CLASS}
+                  />
+                  <span className={PARAM_HINT_CLASS}>{GIF_FRAME_COUNT_HINT}</span>
+                </FieldGroup>
+
+                <FieldGroup label="每帧时长（毫秒）">
+                  <input
+                    value={frameDurationInput}
+                    onChange={(event) => onFrameDurationInputChange(event.target.value)}
+                    onBlur={onCommitFrameDuration}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur()
+                    }}
+                    type="number"
+                    min={20}
+                    step={1}
+                    inputMode="numeric"
+                    placeholder="留空跟随上游"
+                    aria-label="GIF 每帧时长"
+                    className={PARAM_INPUT_CLASS}
+                  />
+                  <span className={PARAM_HINT_CLASS}>{GIF_FRAME_DURATION_HINT}</span>
+                </FieldGroup>
+              </>
+            ) : null}
 
             <FieldGroup label="压缩率">
               <input
                 value={outputCompressionInput}
                 onChange={(event) => onOutputCompressionInputChange(event.target.value)}
                 onBlur={onCommitOutputCompression}
-                disabled={params.output_format === 'png'}
+                disabled={compressionDisabled}
                 type="number"
                 min={0}
                 max={100}
-                placeholder="0-100"
+                placeholder={isGif ? 'GIF 不使用压缩率' : '0-100'}
                 aria-label="压缩率"
                 className={`w-full rounded-xl border border-gray-200/60 px-3 py-2 text-xs shadow-sm outline-none dark:border-white/[0.08] ${
-                  params.output_format === 'png'
+                  compressionDisabled
                     ? 'cursor-not-allowed bg-gray-100/50 opacity-50 dark:bg-white/[0.05]'
                     : 'bg-white/70 dark:bg-white/[0.03]'
                 }`}

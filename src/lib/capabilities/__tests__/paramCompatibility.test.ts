@@ -40,4 +40,37 @@ describe('paramCompatibility', () => {
     }, DEFAULT_SETTINGS, { hasInputImages: false })
     expect(next.input_fidelity).toBe(null)
   })
+
+  it('clears compression and clamps gif frame params', () => {
+    const baseParams = { ...DEFAULT_PARAMS, output_format: 'gif' as const }
+
+    const imagesNext = normalizeParamsForSettings({
+      ...baseParams,
+      output_compression: 80,
+      frame_count: 1,
+      frame_duration_ms: 5000,
+    }, DEFAULT_SETTINGS)
+    expect(imagesNext.output_compression).toBe(null)
+    expect(imagesNext.frame_count).toBe(2)
+    expect(imagesNext.frame_duration_ms).toBe(5000)
+
+    const responsesNext = normalizeParamsForSettings({
+      ...baseParams,
+      frame_count: 99,
+      frame_duration_ms: 5000,
+    }, { ...DEFAULT_SETTINGS, apiProtocol: 'responses' })
+    expect(responsesNext.frame_count).toBe(16)
+    expect(responsesNext.frame_duration_ms).toBe(2000)
+  })
+
+  it('clears gif frame params for non-gif output', () => {
+    const next = normalizeParamsForSettings({
+      ...DEFAULT_PARAMS,
+      output_format: 'webp',
+      frame_count: 9,
+      frame_duration_ms: 200,
+    }, DEFAULT_SETTINGS)
+    expect(next.frame_count).toBe(null)
+    expect(next.frame_duration_ms).toBe(null)
+  })
 })

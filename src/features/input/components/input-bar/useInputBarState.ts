@@ -74,6 +74,8 @@ export interface ParamsSectionViewModel {
   hasInputImages: boolean
   outputCompressionInput: string
   nInput: string
+  frameCountInput: string
+  frameDurationInput: string
   onActiveProviderChange: (providerId: string) => void
   onOpenSizePicker: () => void
   onSetParams: (params: Partial<TaskParams>) => void
@@ -81,6 +83,10 @@ export interface ParamsSectionViewModel {
   onCommitOutputCompression: () => void
   onNInputChange: (value: string) => void
   onCommitN: () => void
+  onFrameCountInputChange: (value: string) => void
+  onCommitFrameCount: () => void
+  onFrameDurationInputChange: (value: string) => void
+  onCommitFrameDuration: () => void
 }
 
 export interface SubmitSectionViewModel {
@@ -151,6 +157,12 @@ export function useInputBarState(): InputBarViewModel {
     params.output_compression == null ? '' : String(params.output_compression),
   )
   const [nInput, setNInput] = useState(String(params.n))
+  const [frameCountInput, setFrameCountInput] = useState(
+    params.frame_count == null ? '' : String(params.frame_count),
+  )
+  const [frameDurationInput, setFrameDurationInput] = useState(
+    params.frame_duration_ms == null ? '' : String(params.frame_duration_ms),
+  )
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
   // ===== Derived values =====
@@ -189,6 +201,14 @@ export function useInputBarState(): InputBarViewModel {
   useEffect(() => {
     setNInput(String(params.n))
   }, [params.n])
+
+  useEffect(() => {
+    setFrameCountInput(params.frame_count == null ? '' : String(params.frame_count))
+  }, [params.frame_count])
+
+  useEffect(() => {
+    setFrameDurationInput(params.frame_duration_ms == null ? '' : String(params.frame_duration_ms))
+  }, [params.frame_duration_ms])
 
   useEffect(() => {
     const normalizedParams = normalizeParamsForSettings(params, settings, { hasInputImages })
@@ -245,6 +265,42 @@ export function useInputBarState(): InputBarViewModel {
     setNInput(String(normalizedParams.n))
   }, [commitNormalizedParams, nInput, params])
 
+  const commitFrameCount = useCallback(() => {
+    if (frameCountInput.trim() === '') {
+      setFrameCountInput('')
+      applyParamPatch({ frame_count: null })
+      return
+    }
+
+    const nextValue = Number(frameCountInput)
+    if (Number.isNaN(nextValue)) {
+      setFrameCountInput(params.frame_count == null ? '' : String(params.frame_count))
+      return
+    }
+
+    setFrameCountInput(String(nextValue))
+    applyParamPatch({ frame_count: nextValue })
+  }, [applyParamPatch, frameCountInput, params.frame_count])
+
+  const commitFrameDuration = useCallback(() => {
+    if (frameDurationInput.trim() === '') {
+      setFrameDurationInput('')
+      applyParamPatch({ frame_duration_ms: null })
+      return
+    }
+
+    const nextValue = Number(frameDurationInput)
+    if (Number.isNaN(nextValue)) {
+      setFrameDurationInput(
+        params.frame_duration_ms == null ? '' : String(params.frame_duration_ms),
+      )
+      return
+    }
+
+    setFrameDurationInput(String(nextValue))
+    applyParamPatch({ frame_duration_ms: nextValue })
+  }, [applyParamPatch, frameDurationInput, params.frame_duration_ms])
+
   const requestClearInputImages = useCallback(() => {
     setConfirmDialog({
       title: '清空参考图',
@@ -294,6 +350,8 @@ export function useInputBarState(): InputBarViewModel {
     hasInputImages,
     outputCompressionInput,
     nInput,
+    frameCountInput,
+    frameDurationInput,
     onActiveProviderChange: setActiveProvider,
     onOpenSizePicker: () => setShowSizePicker(true),
     onSetParams: applyParamPatch,
@@ -301,6 +359,10 @@ export function useInputBarState(): InputBarViewModel {
     onCommitOutputCompression: commitOutputCompression,
     onNInputChange: setNInput,
     onCommitN: commitN,
+    onFrameCountInputChange: setFrameCountInput,
+    onCommitFrameCount: commitFrameCount,
+    onFrameDurationInputChange: setFrameDurationInput,
+    onCommitFrameDuration: commitFrameDuration,
   }
 
   // ===== Sub-ViewModel: SubmitSection =====

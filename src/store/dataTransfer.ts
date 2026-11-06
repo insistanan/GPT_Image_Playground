@@ -156,7 +156,7 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
 }
 
 function isTaskOutputFormat(value: unknown): value is TaskParams['output_format'] {
-  return value === 'png' || value === 'jpeg' || value === 'webp'
+  return value === 'png' || value === 'jpeg' || value === 'webp' || value === 'gif'
 }
 
 function isTaskModeration(value: unknown): value is TaskParams['moderation'] {
@@ -209,6 +209,8 @@ function getImportedParams(
 
   const record = params as Partial<TaskParams> & Record<string, unknown>
   const outputCompression = record.output_compression
+  const frameCount = record.frame_count
+  const frameDurationMs = record.frame_duration_ms
   const n = record.n
 
   return {
@@ -229,6 +231,12 @@ function getImportedParams(
     ),
     background: isTaskBackground(record.background) ? record.background : DEFAULT_PARAMS.background,
     input_fidelity: isTaskInputFidelity(record.input_fidelity) ? record.input_fidelity : null,
+    frame_count:
+      typeof frameCount === 'number' && Number.isFinite(frameCount) ? Math.round(frameCount) : null,
+    frame_duration_ms:
+      typeof frameDurationMs === 'number' && Number.isFinite(frameDurationMs)
+        ? Math.round(frameDurationMs)
+        : null,
   }
 }
 

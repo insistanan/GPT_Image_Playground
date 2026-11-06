@@ -28,7 +28,7 @@ function appendCommonEditFormFields(
   formData.append('quality', params.quality)
   formData.append('output_format', params.output_format)
   formData.append('moderation', params.moderation)
-  if (params.output_format !== 'png' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
     formData.append('output_compression', String(params.output_compression))
   }
   appendSharedImageParams(formData, params, {
@@ -55,7 +55,7 @@ function buildImagesGenerateRequestSpec({
     moderation: params.moderation,
   }
 
-  if (params.output_format !== 'png' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
     body.output_compression = params.output_compression
   }
   appendSharedImageParams(body, params, {
@@ -105,7 +105,7 @@ async function buildImagesEditJsonRequestSpec({
     moderation: params.moderation,
   }
 
-  if (params.output_format !== 'png' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
     body.output_compression = params.output_compression
   }
   appendSharedImageParams(body, params, {
@@ -179,7 +179,13 @@ async function buildImagesEditMultipartRequestSpec({
       n: params.n > 1 ? params.n : undefined,
       background: params.background,
       input_fidelity: params.input_fidelity ?? undefined,
-      output_compression: params.output_format !== 'png' ? params.output_compression : undefined,
+      output_compression:
+        params.output_format !== 'png' && params.output_format !== 'gif'
+          ? params.output_compression
+          : undefined,
+      frame_count: params.output_format === 'gif' ? params.frame_count ?? undefined : undefined,
+      frame_duration_ms:
+        params.output_format === 'gif' ? params.frame_duration_ms ?? undefined : undefined,
       imageCount: inputImageDataUrls.length,
       hasMask: Boolean(editMaskDataUrl),
       stream: plan.transport === 'stream',

@@ -51,7 +51,10 @@ export async function callImagesApi(
 ): Promise<CallApiResult> {
   const { settings, inputImageDataUrls } = opts
   const isEdit = inputImageDataUrls.length > 0
-  const planner = createImagesPlanner(settings, { isEdit })
+  const planner = createImagesPlanner(settings, {
+    isEdit,
+    outputFormat: opts.params.output_format,
+  })
 
   while (true) {
     const plan = planner.currentPlan

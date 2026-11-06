@@ -73,7 +73,7 @@ export function buildResponsesRequestBody({
   if (params.moderation) {
     tool.moderation = params.moderation
   }
-  if (params.output_format !== 'png' && params.output_compression != null) {
+  if (params.output_format !== 'png' && params.output_format !== 'gif' && params.output_compression != null) {
     tool.output_compression = params.output_compression
   }
   appendSharedImageParams(tool, params, {

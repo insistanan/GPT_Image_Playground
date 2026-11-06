@@ -10,6 +10,8 @@ export const DEFAULT_PARAMS: TaskParams = {
   n: 1,
   background: 'auto',
   input_fidelity: null,
+  frame_count: null,
+  frame_duration_ms: null,
 }
 
 export function resolveTaskParamSizeOrDefault(size: string): string {

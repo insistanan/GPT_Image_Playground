@@ -163,12 +163,16 @@ export type TaskInputFidelity = 'high' | 'low'
 export interface TaskParams {
   size: string
   quality: TaskQuality
-  output_format: 'png' | 'jpeg' | 'webp'
+  output_format: 'png' | 'jpeg' | 'webp' | 'gif'
   output_compression: number | null
   moderation: 'auto' | 'low'
   n: number
   background: TaskBackground
   input_fidelity?: TaskInputFidelity | null
+  /** GIF 动图帧数，null 表示不指定、跟随上游默认值 */
+  frame_count: number | null
+  /** GIF 每帧时长（毫秒），null 表示不指定、跟随上游默认值 */
+  frame_duration_ms: number | null
 }
 
 export interface AppliedImageParams {

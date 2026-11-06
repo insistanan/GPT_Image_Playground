@@ -15,8 +15,10 @@ export interface CatalogModelOption {
  * 列表仅为常用建议，用户仍可手动输入任意模型 ID。
  */
 export const IMAGE_MODEL_OPTIONS: CatalogModelOption[] = [
-  { value: 'gpt-image-2.5-sunburst', hint: '最新 · 默认 · 编辑精度' },
-  { value: 'gpt-image-2.5-flare', hint: '最新 · 速度优先' },
+  { value: 'gpt-image-2.6-sunburst', hint: '最新 · 编辑精度' },
+  { value: 'gpt-image-2.6-flare', hint: '最新 · 速度优先' },
+  { value: 'gpt-image-2.5-sunburst', hint: '稳定 · 默认 · 编辑精度' },
+  { value: 'gpt-image-2.5-flare', hint: '稳定 · 速度优先' },
   { value: 'gpt-images-2.5', hint: '兼容渠道' },
   { value: 'gpt-image-2', hint: '稳定' },
   { value: 'gpt-image-1.5', hint: '下线 2026-12-01', deprecated: true },
@@ -41,7 +43,13 @@ export function isImageModelId(id: string | null | undefined): boolean {
 
 export function isGptImage25Model(model: string | null | undefined): boolean {
   const normalized = (model ?? '').trim().toLowerCase()
-  return normalized.includes('gpt-image-2.5') || normalized.includes('gpt-images-2.5')
+  // 2.6 与 2.5 同属支持 xhigh / max 质量档的模型家族。
+  return (
+    normalized.includes('gpt-image-2.5') ||
+    normalized.includes('gpt-images-2.5') ||
+    normalized.includes('gpt-image-2.6') ||
+    normalized.includes('gpt-images-2.6')
+  )
 }
 
 /** 当前协议实际用来生图的模型：Images 用顶层 model，Responses 用 tools[].model。 */
