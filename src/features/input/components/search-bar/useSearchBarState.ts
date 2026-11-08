@@ -208,7 +208,7 @@ export function useSearchBarState() {
 
   const handleSubmitCategory = async () => {
     if (editorMode === 'create') {
-      if (!runGalleryCreateCategory(categoryInput)) {
+      if (!(await runGalleryCreateCategory(categoryInput))) {
         return
       }
       resetEditor()

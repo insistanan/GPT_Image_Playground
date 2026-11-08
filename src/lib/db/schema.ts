@@ -105,36 +105,54 @@ function backfillLegacyImageKinds(store: IDBObjectStore) {
   }
 }
 
-export function dbTransaction<T>(
+export async function dbTransaction<T>(
   storeName: string,
   mode: IDBTransactionMode,
   fn: (store: IDBObjectStore) => IDBRequest<T>,
 ): Promise<T> {
-  return openDB().then(
-    (db) =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, mode)
-        const store = tx.objectStore(storeName)
-        const req = fn(store)
+  const db = await openDB()
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      const tx = db.transaction(storeName, mode)
+      let req: IDBRequest<T>
+      try {
+        req = fn(tx.objectStore(storeName))
+      } catch (error) {
+        tx.abort()
+        reject(error)
+        return
+      }
 
-        const closeDB = () => {
-          db.close()
-        }
+      req.onerror = () => reject(req.error ?? new Error(`IndexedDB 请求失败：${storeName}`))
+      tx.onabort = () => reject(tx.error ?? new Error(`IndexedDB 事务已中止：${storeName}`))
+      tx.oncomplete = () => resolve(req.result)
+      tx.onerror = () => reject(tx.error ?? new Error(`IndexedDB 事务失败：${storeName}`))
+    })
+  } finally {
+    db.close()
+  }
+}
 
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => {
-          reject(req.error ?? new Error(`IndexedDB 请求失败：${storeName}`))
-          closeDB()
-        }
-        tx.onabort = () => {
-          reject(tx.error ?? new Error(`IndexedDB 事务已中止：${storeName}`))
-          closeDB()
-        }
-        tx.oncomplete = closeDB
-        tx.onerror = () => {
-          reject(tx.error ?? new Error(`IndexedDB 事务失败：${storeName}`))
-          closeDB()
-        }
-      }),
-  )
+/** 同一事务内完成批量写入，只有提交成功才返回。回调中不能等待异步工作。 */
+export async function writeDbBatch(
+  storeNames: string[],
+  write: (transaction: IDBTransaction) => void,
+): Promise<void> {
+  const db = await openDB()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(storeNames, 'readwrite')
+      transaction.oncomplete = () => resolve()
+      transaction.onabort = () => reject(transaction.error ?? new Error('IndexedDB 批量事务已中止'))
+      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB 批量事务失败'))
+      try {
+        write(transaction)
+      } catch (error) {
+        transaction.abort()
+        reject(error)
+      }
+    })
+  } finally {
+    db.close()
+  }
 }

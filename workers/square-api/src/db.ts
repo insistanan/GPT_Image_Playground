@@ -100,9 +100,8 @@ export async function assertQuotaAvailable(env: Env, publisherId: string, kind: 
   }
 }
 
-export async function consumeQuota(env: Env, publisherId: string, kind: ShareKind): Promise<void> {
+export async function consumeQuota(env: Env, publisherId: string, kind: ShareKind, quotaDay = getQuotaDay()): Promise<void> {
   const config = getConfig(env)
-  const quotaDay = getQuotaDay()
   await env.DB.prepare(
     `INSERT OR IGNORE INTO publisher_quota_days
        (publisher_id, quota_day, media_share_count, prompt_share_count)
@@ -133,8 +132,7 @@ export async function consumeQuota(env: Env, publisherId: string, kind: ShareKin
   }
 }
 
-export async function releaseQuotaBestEffort(env: Env, publisherId: string, kind: ShareKind): Promise<void> {
-  const quotaDay = getQuotaDay()
+export async function releaseQuota(env: Env, publisherId: string, kind: ShareKind, quotaDay = getQuotaDay()): Promise<void> {
   const column = kind === 'prompt' ? 'prompt_share_count' : 'media_share_count'
   await env.DB.prepare(
     `UPDATE publisher_quota_days
@@ -143,7 +141,6 @@ export async function releaseQuotaBestEffort(env: Env, publisherId: string, kind
   )
     .bind(publisherId, quotaDay)
     .run()
-    .catch(() => undefined)
 }
 
 export async function findExistingShareByRequest(

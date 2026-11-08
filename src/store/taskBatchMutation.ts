@@ -1,4 +1,4 @@
-import { putTask } from '@/lib/db'
+import { putTasks } from '@/lib/db'
 import type { TaskRecord } from '@/types'
 import { useStore } from './state'
 import { clearTaskUiState } from './taskStoreUtils'
@@ -53,15 +53,15 @@ export function collectChangedTasks(
 }
 
 export async function persistTaskBatchMutation(
-  updatedTasks: TaskRecord[],
   changedTasks: TaskRecord[],
   options?: ApplyTaskBatchMutationOptions,
 ) {
-  useStore.getState().setTasks(updatedTasks)
+  await putTasks(changedTasks)
+  const changedById = new Map(changedTasks.map((task) => [task.id, task]))
+  useStore.getState().setTasks(useStore.getState().tasks.map((task) => changedById.get(task.id) ?? task))
 
   if (options?.clearSelection && changedTasks.length > 0) {
     clearTaskUiState(new Set(changedTasks.map((task) => task.id)))
   }
 
-  await Promise.all(changedTasks.map((task) => putTask(task)))
 }

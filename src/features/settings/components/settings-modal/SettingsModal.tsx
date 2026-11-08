@@ -193,7 +193,13 @@ export default function SettingsModal() {
                 setConfirmDialog({
                   title: '清空所有数据',
                   message: '确定要清空所有任务记录和图片数据吗？此操作不可恢复。',
-                  action: () => clearAllData(),
+                  action: async () => {
+                    try {
+                      await clearAllData()
+                    } catch (error) {
+                      useStore.getState().showToast(`清空数据失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+                    }
+                  },
                 })
               }
             />

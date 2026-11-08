@@ -271,6 +271,7 @@ export async function readResponsesPayloadStream(
   signal: AbortSignal,
   logEntry?: ApiDebugRequestLogEntry,
   onPartialImage?: CallApiOptions['onPartialImage'],
+  onFinalImages?: CallApiOptions['onFinalImages'],
 ): Promise<StreamedPayloadResult> {
   const requestId = attachDebugResponseMeta(logEntry, response)
   const emittedImageSignatures = new Set<string>()
@@ -305,6 +306,7 @@ export async function readResponsesPayloadStream(
             emittedImageSignatures.add(signature)
             streamedImages.push(imageAsset)
             streamedFinalImageCount += 1
+            await onFinalImages?.([imageAsset])
           }
         }
       }
@@ -334,7 +336,7 @@ export async function readResponsesPayloadStream(
           (event.dataText ? tryParseJson(event.dataText) : undefined)
 
       if (!parsedJson || !isRecord(parsedJson)) {
-        return
+        return event.event === 'response.completed'
       }
 
       lastJsonPayload = parsedJson
@@ -365,6 +367,7 @@ export async function readResponsesPayloadStream(
         signal,
         emittedImageSignatures,
         async (images) => {
+          await onFinalImages?.(images)
           for (const image of images) {
             streamedImages.push(image)
           }
@@ -448,6 +451,7 @@ export async function readImagesPayloadStream(
   signal: AbortSignal,
   logEntry?: ApiDebugRequestLogEntry,
   onPartialImage?: CallApiOptions['onPartialImage'],
+  onFinalImages?: CallApiOptions['onFinalImages'],
 ): Promise<StreamedPayloadResult> {
   const requestId = attachDebugResponseMeta(logEntry, response)
   const emittedImageSignatures = new Set<string>()
@@ -489,6 +493,7 @@ export async function readImagesPayloadStream(
         signal,
         emittedImageSignatures,
         async (images) => {
+          await onFinalImages?.(images)
           for (const image of images) {
             streamedImages.push(image)
           }

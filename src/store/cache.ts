@@ -1,4 +1,5 @@
-import * as imageDb from '@/lib/db'
+import type { StoredImage } from '@/types'
+import { getImageRecord, getImageDataUrl, getImageIdsByKind, migrateLegacyImageRecord } from '@/lib/db'
 
 export type CachedImageVariant = 'original' | 'thumbnail'
 
@@ -12,31 +13,6 @@ interface CachedImageEntry {
   revoke?: () => void
 }
 
-interface StoredImageRecordCompat {
-  id: string
-  kind?: string | null
-  dataUrl?: string | null
-  url?: string | null
-  remoteUrl?: string | null
-  blob?: Blob | null
-  thumbnailBlob?: Blob | null
-  thumbnailDataUrl?: string | null
-  thumbnailUrl?: string | null
-  width?: number | null
-  height?: number | null
-  thumbnailWidth?: number | null
-  thumbnailHeight?: number | null
-}
-
-interface ImageDbCompat {
-  getImage: (id: string) => Promise<StoredImageRecordCompat | undefined>
-  getImageRecord?: (id: string) => Promise<StoredImageRecordCompat | undefined>
-  getImageDataUrl?: (id: string) => Promise<string | undefined>
-  getImageIdsByKind?: (kind: string) => Promise<string[]>
-  getAllImageRecords?: () => Promise<StoredImageRecordCompat[]>
-  migrateLegacyImageRecord?: (id: string) => Promise<StoredImageRecordCompat | undefined>
-}
-
 interface CacheSnapshot {
   globalVersion: number
   entryVersion: number
@@ -45,11 +21,10 @@ interface CacheSnapshot {
 const ORIGINAL_IMAGE_CACHE_LIMIT = 24
 const THUMBNAIL_IMAGE_CACHE_LIMIT = 256
 
-const dbCompat = imageDb as unknown as ImageDbCompat
 const originalImageCache = new Map<string, CachedImageEntry>()
 const thumbnailImageCache = new Map<string, CachedImageEntry>()
 const imageLoadPromiseCache = new Map<string, Promise<string | undefined>>()
-const imageRecordPromiseCache = new Map<string, Promise<StoredImageRecordCompat | undefined>>()
+const imageRecordPromiseCache = new Map<string, Promise<StoredImage | undefined>>()
 const imageMigrationPromiseCache = new Map<string, Promise<void>>()
 const imageMetadataCache = new Map<string, CachedImageMetadata>()
 const imageInvalidationVersions = new Map<string, number>()
@@ -66,10 +41,6 @@ function getVariantCacheLimit(variant: CachedImageVariant): number {
 
 function getVariantCacheKey(id: string, variant: CachedImageVariant): string {
   return `${variant}:${id}`
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0
 }
 
 function getPositiveNumber(value: unknown): number | undefined {
@@ -150,11 +121,11 @@ function setCacheEntry(id: string, entry: CachedImageEntry, variant: CachedImage
   return entry.src
 }
 
-function cacheRecordMetadata(id: string, record: StoredImageRecordCompat) {
+function cacheRecordMetadata(id: string, record: StoredImage) {
   const width = getPositiveNumber(record.width)
   const height = getPositiveNumber(record.height)
-  const thumbnailWidth = getPositiveNumber(record.thumbnailWidth)
-  const thumbnailHeight = getPositiveNumber(record.thumbnailHeight)
+  const thumbnailWidth = record.kind === 'local_blob' ? getPositiveNumber(record.thumbnailWidth) : undefined
+  const thumbnailHeight = record.kind === 'local_blob' ? getPositiveNumber(record.thumbnailHeight) : undefined
   const resolvedWidth = width && height ? width : thumbnailWidth
   const resolvedHeight = width && height ? height : thumbnailHeight
   if (!resolvedWidth || !resolvedHeight) {
@@ -164,7 +135,7 @@ function cacheRecordMetadata(id: string, record: StoredImageRecordCompat) {
   imageMetadataCache.set(id, { width: resolvedWidth, height: resolvedHeight })
 }
 
-function cacheMigratedRecord(id: string, record: StoredImageRecordCompat, snapshot: CacheSnapshot) {
+function cacheMigratedRecord(id: string, record: StoredImage, snapshot: CacheSnapshot) {
   if (!isCacheSnapshotValid(id, snapshot)) {
     return
   }
@@ -172,21 +143,16 @@ function cacheMigratedRecord(id: string, record: StoredImageRecordCompat, snapsh
   imageRecordPromiseCache.delete(id)
   cacheRecordMetadata(id, record)
 
-  if (record.blob instanceof Blob) {
+  if (record.kind === 'local_blob') {
     setCacheEntry(id, createObjectUrlEntry(record.blob), 'original')
   }
 
-  if (record.thumbnailBlob instanceof Blob) {
+  if (record.kind === 'local_blob' && record.thumbnailBlob instanceof Blob) {
     setCacheEntry(id, createObjectUrlEntry(record.thumbnailBlob), 'thumbnail')
   }
 }
 
 function scheduleLegacyImageMigration(id: string) {
-  const migrateLegacyImageRecord = dbCompat.migrateLegacyImageRecord
-  if (typeof migrateLegacyImageRecord !== 'function') {
-    return
-  }
-
   if (imageMigrationPromiseCache.has(id)) {
     return
   }
@@ -227,26 +193,22 @@ function scheduleIdleWork(callback: () => void) {
   window.setTimeout(callback, 120)
 }
 
-function resolveOriginalSourceEntry(record: StoredImageRecordCompat): CachedImageEntry | undefined {
-  if (record.blob instanceof Blob) {
+function resolveOriginalSourceEntry(record: StoredImage): CachedImageEntry | undefined {
+  if (record.kind === 'local_blob') {
     return createObjectUrlEntry(record.blob)
   }
-
-  const src = [record.remoteUrl, record.dataUrl, record.url].find(isNonEmptyString)
-  return src ? { src } : undefined
+  return { src: record.kind === 'remote_url' ? record.remoteUrl : record.dataUrl }
 }
 
-function resolveThumbnailSourceEntry(record: StoredImageRecordCompat): CachedImageEntry | undefined {
-  if (record.thumbnailBlob instanceof Blob) {
+function resolveThumbnailSourceEntry(record: StoredImage): CachedImageEntry | undefined {
+  if (record.kind === 'local_blob' && record.thumbnailBlob instanceof Blob) {
     return createObjectUrlEntry(record.thumbnailBlob)
   }
-
-  const src = [record.thumbnailDataUrl, record.thumbnailUrl].find(isNonEmptyString)
-  return src ? { src } : undefined
+  return undefined
 }
 
 function resolveSourceEntry(
-  record: StoredImageRecordCompat,
+  record: StoredImage,
   variant: CachedImageVariant,
 ): CachedImageEntry | undefined {
   if (variant === 'thumbnail') {
@@ -259,25 +221,15 @@ function resolveSourceEntry(
   return resolveOriginalSourceEntry(record)
 }
 
-async function loadImageRecord(id: string): Promise<StoredImageRecordCompat | undefined> {
-  const getter = dbCompat.getImageRecord ?? dbCompat.getImage
-  return getter(id)
+async function loadImageRecord(id: string): Promise<StoredImage | undefined> {
+  return getImageRecord(id)
 }
 
 async function loadLegacyImageIds(): Promise<string[]> {
-  if (typeof dbCompat.getImageIdsByKind === 'function') {
-    return dbCompat.getImageIdsByKind('legacy_data_url')
-  }
-
-  if (typeof dbCompat.getAllImageRecords === 'function') {
-    const records = await dbCompat.getAllImageRecords()
-    return records.filter((record) => record.kind === 'legacy_data_url').map((record) => record.id)
-  }
-
-  return []
+  return getImageIdsByKind('legacy_data_url')
 }
 
-function ensureImageRecordLoaded(id: string): Promise<StoredImageRecordCompat | undefined> {
+function ensureImageRecordLoaded(id: string): Promise<StoredImage | undefined> {
   const pending = imageRecordPromiseCache.get(id)
   if (pending) {
     return pending
@@ -368,20 +320,10 @@ export async function ensureImageDataUrl(id: string): Promise<string | undefined
     return undefined
   }
 
-  const compatibleSrc = [record.remoteUrl, record.dataUrl, record.url].find(isNonEmptyString)
-  if (compatibleSrc) {
-    return compatibleSrc
-  }
+  if (record.kind === 'remote_url') return record.remoteUrl
+  if (record.kind === 'legacy_data_url') return record.dataUrl
 
-  if (typeof dbCompat.getImageDataUrl === 'function') {
-    return await dbCompat.getImageDataUrl(id)
-  }
-
-  if (record.blob instanceof Blob) {
-    throw new Error('DB 层缺少 getImageDataUrl(id) 实现，无法把 Blob 图片恢复为 data URL')
-  }
-
-  return undefined
+  return getImageDataUrl(id)
 }
 
 export function setCachedImage(
@@ -435,14 +377,8 @@ export function startLegacyImageMigrationSweep() {
     return
   }
 
-  if (
-    typeof dbCompat.getImageIdsByKind !== 'function' &&
-    typeof dbCompat.getAllImageRecords !== 'function'
-  ) {
-    return
-  }
-
   legacyMigrationSweepStarted = true
+  const version = globalImageCacheVersion
   void loadLegacyImageIds()
     .then((legacyImageIds) => {
       if (legacyImageIds.length === 0) {
@@ -451,6 +387,7 @@ export function startLegacyImageMigrationSweep() {
 
       const pendingIds = [...legacyImageIds]
       const runNextBatch = () => {
+        if (version !== globalImageCacheVersion) return
         const batch = pendingIds.splice(0, 1)
         for (const id of batch) {
           scheduleLegacyImageMigration(id)

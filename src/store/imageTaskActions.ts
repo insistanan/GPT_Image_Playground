@@ -9,6 +9,8 @@ import { findCategoryById } from './domain'
 import { storeImage } from './imageAssets'
 import { useStore } from './state'
 import { createSingleImageTaskRecord } from './taskRecords'
+import { assertDataVersion, DataResetError, getDataVersion, withDataMutation } from './dataMutation'
+import { initStore } from './taskMaintenance'
 
 const SUPPORTED_SINGLE_IMAGE_TYPES = new Set([
   'image/png',
@@ -29,6 +31,9 @@ function isSupportedSingleImageFile(file: File): boolean {
 }
 
 export async function createSingleImageTasksFromFiles(files: File[] | FileList): Promise<number> {
+  const version = getDataVersion()
+  await initStore()
+  assertDataVersion(version)
   const selectedFiles = Array.from(files)
   const acceptedFiles = selectedFiles.filter(isSupportedSingleImageFile)
   const rejectedCount = selectedFiles.length - acceptedFiles.length
@@ -52,24 +57,31 @@ export async function createSingleImageTasksFromFiles(files: File[] | FileList):
 
   for (const file of acceptedFiles) {
     try {
-      const imageId = await storeImage(file, {
-        source: 'upload',
-        mimeType: file.type || null,
-        byteSize: file.size,
-      })
+      await withDataMutation(async () => {
+        const imageId = await storeImage(file, {
+          source: 'upload',
+          mimeType: file.type || null,
+          byteSize: file.size,
+        })
 
-      const task = createSingleImageTaskRecord(imageId, selectedCategory)
-      await putTask(task)
-      createdTasks.push(task)
+        const task = createSingleImageTaskRecord(imageId, selectedCategory)
+        await putTask(task)
+        createdTasks.push(task)
+        const { tasks, setTasks } = useStore.getState()
+        setTasks([task, ...tasks])
+      }, version)
     } catch (error) {
+      if (error instanceof DataResetError) {
+        useStore.getState().showToast('本地数据已重置，已停止添加图片', 'info')
+        return 0
+      }
       failedCount += 1
       console.error('单图任务创建失败', error)
     }
   }
 
   if (createdTasks.length > 0) {
-    const { tasks, setTasks, setDetailTaskId } = useStore.getState()
-    setTasks([...createdTasks.reverse(), ...tasks])
+    const { setDetailTaskId } = useStore.getState()
     if (createdTasks.length === 1) {
       setDetailTaskId(createdTasks[0].id)
     }

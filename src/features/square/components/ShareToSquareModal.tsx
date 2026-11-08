@@ -64,7 +64,7 @@ export default function ShareToSquareModal() {
     }
 
     setTitle((target.title ?? target.content.slice(0, 36)).trim())
-  }, [target, tasks])
+  }, [target])
 
   const close = () => {
     if (isSubmitting) return

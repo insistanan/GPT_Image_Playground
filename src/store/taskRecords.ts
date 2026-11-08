@@ -134,6 +134,19 @@ export function isTaskInRecycleBin(task: Pick<TaskRecord, 'deletedAt'>): boolean
   return typeof task.deletedAt === 'number' && Number.isFinite(task.deletedAt)
 }
 
+/** 已取消或丢失的请求不能继续显示为运行中。 */
+export function recoverInterruptedTask(task: TaskRecord, now = Date.now()): TaskRecord {
+  if (task.status !== 'running') return task
+  return {
+    ...task,
+    status: task.outputImages.length ? 'partial_error' : 'error',
+    isAborted: true,
+    error: '任务执行已中断，已保留完成的图片，可手动重试',
+    finishedAt: now,
+    elapsed: Math.max(0, now - task.createdAt),
+  }
+}
+
 export function resolveTaskStatusLabel(
   task: Pick<TaskRecord, 'status' | 'isAborted'>,
 ): '生成中' | '已完成' | '失败' | '已中止' | '异常' {

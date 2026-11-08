@@ -50,6 +50,14 @@ export async function callImagesApi(
   opts: CallApiOptions,
   ctx: SharedRequestContext,
 ): Promise<CallApiResult> {
+  const onFinalImages = opts.onFinalImages
+  opts = {
+    ...opts,
+    onFinalImages: async (images) => {
+      if (images.length) ctx.finalImagesReceived = true
+      await onFinalImages?.(images)
+    },
+  }
   const { settings, inputImageDataUrls } = opts
   const isEdit = inputImageDataUrls.length > 0
   const planner = createImagesPlanner(settings, {
@@ -88,6 +96,7 @@ export async function callImagesApi(
               ctx.controller.signal,
               debugLogEntry,
               opts.onPartialImage,
+              opts.onFinalImages,
             )
           : null
       const payload = streamResult?.payload ?? (await readImagesPayload(response, debugLogEntry))
@@ -121,7 +130,7 @@ export async function callImagesApi(
         ),
       }
     } catch (error) {
-      if (!planner.failAndAdvance(error)) {
+      if (ctx.finalImagesReceived || !planner.failAndAdvance(error)) {
         throw normalizeModerationRejectionError(
           isEdit ? normalizeImagesEditCompatibilityError(error) : error,
         )

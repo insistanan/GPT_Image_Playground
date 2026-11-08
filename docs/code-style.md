@@ -19,6 +19,11 @@
 - 应用级骨架和顶层编排放在 `src/app` 或 `src/App.tsx`，不要把业务细节塞进根组件。
 - 接口调用统一收敛到 `src/lib/api` 或独立 api adapter，UI 组件不要直接承载复杂协议兼容逻辑；协议测试优先跟随 `src/lib/api/__tests__`。
 - Zustand 状态与任务工作流放在 `src/store/*`，基础状态优先拆到 `src/store/slices/*`，运行时与任务编排继续拆到独立模块。
+- 供应商、分类、提示词和备份关联规则分别放在 `src/store/domain/*`；`domain.ts` 只保留导出入口。归档编解码和导入校验放在 `src/store/data-transfer/*`。
+- 本地任务提交、画廊修改、导入、清理通过 `dataMutation.ts` 协调；网络请求放在队列外，禁止嵌套队列。清空操作递增数据版本，异步结果提交前必须检查版本。
+- IndexedDB 的成功以事务提交为准；任务与图片的导入使用同一事务，持久化成功后再发布状态。配置存在 localStorage，不能把跨存储介质的恢复描述为原子事务。
+- 图片读取统一使用 `getImageView` 和 `useImageAssetView`；旧图片格式兼容收敛在 DB 层，缓存只消费规范化的 `StoredImage` 联合类型。
+- 本地与广场大图的展示、缩放手势共用 `shared/components/image-viewer/*`；业务导航与任务状态保留在各自 feature，不保留无调用者的旧转发入口。两种画廊布局共用视口测量，不强行合并布局算法。
 - IndexedDB 访问统一收敛到 `src/lib/db/*`，按 `schema / tasks / images` 拆分，不要回退到单文件巨型 DB 模块。
 - 表单、弹窗、卡片、列表、右键菜单等组件要注意进一步拆分，避免再次出现超大 TSX 文件。
 - 组件优先通过 props、hooks、shared utility 复用，避免复制粘贴同类逻辑。
@@ -30,6 +35,7 @@
 - 图片分享广场第一版后端实现放在 `workers/square-api/*`，但前端只能依赖 `/api/v1` 协议与 adapter，不要把 Worker、D1、R2 细节泄漏进 UI 组件。
 - 后端至少区分实体类、接口定义、服务层、数据访问层、数据库连接/配置层。
 - 路由层只做请求接收和响应组装，不直接堆业务逻辑与数据库细节。
+- 广场发布编排位于 `workers/square-api/src/services/sharePublish.ts`；R2 上传前登记待补偿对象，清理失败必须记录并保留存储预留额度。D1 提交结果不确定时先核实，避免删除已发布资产。
 - 数据库访问、事务、第三方服务调用不要散落在控制器或实体类中。
 
 ## Naming

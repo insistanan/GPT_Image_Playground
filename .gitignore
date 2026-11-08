@@ -10,3 +10,4 @@ workers/**/.dev.vars
 workers/**/.dev.vars.*
 workers/**/.wrangler/
 workers/square-api/wrangler.jsonc
+/.oce-client/

@@ -47,9 +47,9 @@ export async function enqueueTaskRun(
   task: TaskRecord,
   options?: EnqueueTaskRunOptions,
 ) {
+  await putTask(task)
   const { tasks, setTasks, setDetailTaskId } = useStore.getState()
   setTasks([task, ...tasks])
-  await putTask(task)
 
   if (options?.focusDetail) {
     setDetailTaskId(task.id)
@@ -76,7 +76,7 @@ export async function retryTaskRun(task: TaskRecord): Promise<RetryTaskRunResult
     }
   }
 
-  restartTaskRun(task.id)
+  await restartTaskRun(task.id)
   return {
     ok: true,
     task,
@@ -108,8 +108,8 @@ export function requestAbortTaskRun(task: TaskRecord): RequestAbortTaskRunResult
   }
 }
 
-export function restartTaskRun(taskId: string) {
-  updateTaskInStore(taskId, {
+export async function restartTaskRun(taskId: string) {
+  await updateTaskInStore(taskId, {
     status: 'running',
     isAborted: false,
     error: null,
@@ -122,20 +122,20 @@ export function restartTaskRun(taskId: string) {
   })
 }
 
-export function appendTaskRunOutputs(taskId: string, outputImageIds: string[]) {
-  updateTaskInStore(taskId, {
+export async function appendTaskRunOutputs(taskId: string, outputImageIds: string[]) {
+  await updateTaskInStore(taskId, {
     outputImages: [...outputImageIds],
   })
 }
 
-export function succeedTaskRun(taskId: string, result: TaskRunSuccessResult) {
+export async function succeedTaskRun(taskId: string, result: TaskRunSuccessResult) {
   const task = useStore.getState().tasks.find((item) => item.id === taskId)
   if (!task) {
     return
   }
 
   const finishedAt = Date.now()
-  updateTaskInStore(taskId, {
+  await updateTaskInStore(taskId, {
     outputImages: [...result.outputImageIds],
     responseMeta: result.responseMeta ?? null,
     isAborted: false,
@@ -147,14 +147,14 @@ export function succeedTaskRun(taskId: string, result: TaskRunSuccessResult) {
   })
 }
 
-export function abortTaskRun(taskId: string, outputImageIds: string[]) {
+export async function abortTaskRun(taskId: string, outputImageIds: string[]) {
   const task = useStore.getState().tasks.find((item) => item.id === taskId)
   if (!task) {
     return
   }
 
   const finishedAt = Date.now()
-  updateTaskInStore(taskId, {
+  await updateTaskInStore(taskId, {
     outputImages: [...outputImageIds],
     status: outputImageIds.length > 0 ? 'partial_error' : 'error',
     isAborted: true,
@@ -165,14 +165,14 @@ export function abortTaskRun(taskId: string, outputImageIds: string[]) {
   })
 }
 
-export function failTaskRun(taskId: string, failure: TaskRunFailure) {
+export async function failTaskRun(taskId: string, failure: TaskRunFailure) {
   const task = useStore.getState().tasks.find((item) => item.id === taskId)
   if (!task) {
     return
   }
 
   const finishedAt = Date.now()
-  updateTaskInStore(taskId, {
+  await updateTaskInStore(taskId, {
     outputImages: [...failure.outputImageIds],
     status: failure.outputImageIds.length > 0 ? 'partial_error' : 'error',
     isAborted: false,

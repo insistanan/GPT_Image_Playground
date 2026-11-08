@@ -67,18 +67,21 @@ npm run preview
 │  │     └─ components/
 │  │        ├─ detail-modal/    详情弹窗继续按预览区 / 信息区 / 图片状态 hook 拆分
 │  │        ├─ image-edit-modal/ 局部编辑弹窗继续按画布区 / 侧栏 / 选区 hook / 状态 hook 拆分
-│  │        └─ lightbox/        大图查看继续按状态导航 / 缩放手势 / 视图壳层拆分
+│  │        └─ lightbox/        大图查看的业务导航，展示与缩放复用 shared
 │  ├─ hooks/                    自定义 hooks
 │  ├─ lib/                      基础能力与适配层
 │  │  ├─ api/                   Images / Responses 协议实现
 │  │  ├─ capabilities/          模型目录、官方字段兼容与参数收口
-│  │  ├─ db/                    IndexedDB schema / tasks / images 访问拆分
+│  │  ├─ db/                    IndexedDB schema / tasks / images / archive 原子导入
 │  │  ├─ devProxy.ts            本地代理辅助
 │  │  └─ size.ts                尺寸计算与规整
 │  ├─ shared/
-│  │  └─ components/            通用组件
+│  │  └─ components/            通用组件；image-viewer/ 共用大图展示与缩放手势
 │  ├─ store/                    Zustand 状态、切片、任务工作流、导入导出等实现
-│  │  └─ slices/                provider / inputDraft / task / viewer / dialog 基础切片
+│  │  ├─ slices/                provider / inputDraft / task / viewer / dialog 基础切片
+│  │  ├─ domain/                供应商、分类、提示词、备份关联规则
+│  │  ├─ data-transfer/         ZIP 归档处理与导入格式校验
+│  │  └─ dataMutation.ts        本地写入队列与数据重置版本
 │  ├─ App.tsx                   应用根组件
 │  ├─ main.tsx                  入口
 │  ├─ store.ts                  Store 统一导出入口
@@ -93,9 +96,12 @@ npm run preview
 - 复杂 feature 允许继续下钻子目录，例如 `components/input-bar/*`、`components/prompt-library-drawer/*`、`components/search-bar/*`、`components/size-picker/*`、`components/task-grid/*`、`components/task-card/*`、`components/settings-modal/*`、`components/square/*`、`components/detail-modal/*`、`components/image-edit-modal/*`、`components/lightbox/*`。
 - `src/shared/components` 只放跨模块复用的通用组件。
 - `src/store/*` 放状态、任务编排、缓存、导入导出等逻辑实现；基础状态优先收敛到 `src/store/slices/*`。
+- 本地任务写入、画廊修改、导入和清理通过 `src/store/dataMutation.ts` 协调；网络请求在队列外执行，禁止嵌套队列。清空之后的旧异步结果不得回写。
+- `src/store/domain.ts` 只作为领域规则导出入口；真实实现放在 `domain/*`。归档编解码与校验放在 `data-transfer/*`。
 - `src/lib/api/*` 放协议适配、请求编排、流式解析与相关测试；`src/lib/api.ts` 仅作为统一导出入口。
-- `src/lib/db/*` 放 IndexedDB schema、task 读写、image 读写与迁移逻辑；不要再把整套 DB 细节堆回单文件。
+- `src/lib/db/*` 放 IndexedDB schema、task 读写、image 读写与迁移、archive 原子导入逻辑；不要再把整套 DB 细节堆回单文件。
 - `workers/square-api/*` 放图片分享广场 API 的 Worker 实现；前端只能依赖 `/api/v1` 协议与 adapter，不能反向依赖 Worker、D1 或 R2 细节。
+- 广场发布路由委托 `workers/square-api/src/services/sharePublish.ts` 编排上传、持久化与失败补偿。
 
 # Important Notes
 

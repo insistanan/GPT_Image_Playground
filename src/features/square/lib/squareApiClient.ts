@@ -25,8 +25,8 @@ export interface SquareCreateShareResult {
 
 export interface SquareApiClient {
   isConfigured(): boolean
-  listSquare(input: SquareListInput): Promise<SquareListResult>
-  listMyShares(input: SquareMySharesInput): Promise<SquareListResult>
+  listSquare(input: SquareListInput, signal?: AbortSignal): Promise<SquareListResult>
+  listMyShares(input: SquareMySharesInput, signal?: AbortSignal): Promise<SquareListResult>
   getShare(id: string): Promise<SquareShareDetail>
   createShare(input: SquareCreateShareInput): Promise<SquareCreateShareResult>
   deleteShare(id: string): Promise<void>
@@ -102,6 +102,7 @@ function createAssetFileName(clientAssetId: string, variant: 'original' | 'thumb
 
 class HttpSquareApiClient implements SquareApiClient {
   private readonly baseUrl: string
+  private identityRequest: Promise<SquareIdentity> | null = null
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
@@ -118,7 +119,7 @@ class HttpSquareApiClient implements SquareApiClient {
     return `${this.baseUrl}${pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`}`
   }
 
-  async listSquare(input: SquareListInput): Promise<SquareListResult> {
+  async listSquare(input: SquareListInput, signal?: AbortSignal): Promise<SquareListResult> {
     assertConfigured(this.baseUrl)
     const query = buildQuery({
       kind: input.kind,
@@ -127,11 +128,11 @@ class HttpSquareApiClient implements SquareApiClient {
       cursor: input.cursor,
       limit: input.limit ?? 30,
     })
-    const response = await fetch(`${this.baseUrl}/api/v1/square${query}`)
+    const response = await fetch(`${this.baseUrl}/api/v1/square${query}`, { signal })
     return readJsonEnvelope<SquareListResult>(response)
   }
 
-  async listMyShares(input: SquareMySharesInput): Promise<SquareListResult> {
+  async listMyShares(input: SquareMySharesInput, signal?: AbortSignal): Promise<SquareListResult> {
     assertConfigured(this.baseUrl)
     const identity = await this.ensureIdentity()
     const query = buildQuery({
@@ -140,6 +141,7 @@ class HttpSquareApiClient implements SquareApiClient {
       limit: input.limit ?? 30,
     })
     const response = await fetch(`${this.baseUrl}/api/v1/me/shares${query}`, {
+      signal,
       headers: {
         Authorization: `Bearer ${identity.token}`,
       },
@@ -209,13 +211,15 @@ class HttpSquareApiClient implements SquareApiClient {
   private async ensureIdentity(): Promise<SquareIdentity> {
     const cached = readSquareIdentity()
     if (cached) return cached
-
-    const response = await fetch(`${this.baseUrl}/api/v1/identity`, {
-      method: 'POST',
-    })
-    const identity = await readJsonEnvelope<SquareIdentity>(response)
-    saveSquareIdentity(identity)
-    return identity
+    if (!this.identityRequest) {
+      this.identityRequest = (async () => {
+        const response = await fetch(`${this.baseUrl}/api/v1/identity`, { method: 'POST' })
+        const identity = await readJsonEnvelope<SquareIdentity>(response)
+        saveSquareIdentity(identity)
+        return identity
+      })().finally(() => { this.identityRequest = null })
+    }
+    return this.identityRequest
   }
 }
 

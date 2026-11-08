@@ -87,6 +87,8 @@ export type ActualTransportKind = NonNullable<AppliedTransportMeta['actual']>
 
 export interface SharedRequestContext {
   controller: AbortController
+  /** 已收到最终图片后，不再通过重新生成请求做兼容降级。 */
+  finalImagesReceived?: boolean
   /**
    * 重置请求超时计时器。每个 RequestPlan 开始时调用，
    * 避免前面降级重试消耗掉后续 plan 的全部可用时间。

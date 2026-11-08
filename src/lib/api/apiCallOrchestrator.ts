@@ -119,23 +119,28 @@ function createApiCallRuntime(intent: CallImageApiIntent): ApiCallRuntime {
   }
   baseOpts.registerAbort?.(() => controller.abort('user'))
 
-  return {
-    baseOpts,
-    normalizedOpts: baseOpts,
-    timeoutState,
-    ctx: {
-      controller,
-      refreshTimeout: () => {
-        clearTimeout(timeoutState.id)
-        timeoutState.id = setTimeout(() => controller.abort('timeout'), timeoutMs)
-      },
-      requestHeaders,
-      proxyConfig,
-      mime,
-      forceProxy,
-      debugLog,
+  const ctx: SharedRequestContext = {
+    controller,
+    refreshTimeout: () => {
+      clearTimeout(timeoutState.id)
+      timeoutState.id = setTimeout(() => controller.abort('timeout'), timeoutMs)
     },
+    requestHeaders,
+    proxyConfig,
+    mime,
+    forceProxy,
+    debugLog,
   }
+  const deliveredBlobs = new WeakSet<Blob>()
+  baseOpts.onFinalImages = async (images) => {
+    if (!images.length) return
+    ctx.finalImagesReceived = true
+    const freshImages = images.filter((image) => !deliveredBlobs.has(image.blob))
+    if (!freshImages.length) return
+    await intent.onFinalImages?.(freshImages)
+    for (const image of freshImages) deliveredBlobs.add(image.blob)
+  }
+  return { baseOpts, normalizedOpts: baseOpts, timeoutState, ctx }
 }
 
 async function prepareApiCallRuntime(runtime: ApiCallRuntime): Promise<void> {

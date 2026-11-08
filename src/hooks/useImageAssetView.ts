@@ -8,6 +8,7 @@ export interface UseImageAssetViewResult {
   url: string
   metadata: ImageAssetView['metadata']
   status: 'idle' | 'loading' | 'ready' | 'error'
+  error: string | null
 }
 
 function shouldLoadMetadata(options: ImageAssetViewOptions): boolean {
@@ -18,9 +19,10 @@ export function useImageAssetView(
   imageId: string | null | undefined,
   options: ImageAssetViewOptions = {},
 ): UseImageAssetViewResult {
-  const [resolvedImageId, setResolvedImageId] = useState('')
+  const [resolvedKey, setResolvedKey] = useState('')
   const [view, setView] = useState<ImageAssetView | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [error, setError] = useState<string | null>(null)
 
   const normalizedImageId =
     typeof imageId === 'string' && imageId.trim() ? imageId.trim() : ''
@@ -28,10 +30,12 @@ export function useImageAssetView(
   const includeMetadata = Boolean(options.includeMetadata)
   const inferMetadataFromUrl = Boolean(options.inferMetadataFromUrl)
   const metadataRequested = shouldLoadMetadata(options)
+  const viewKey = `${normalizedImageId}:${variant}:${includeMetadata}:${inferMetadataFromUrl}`
 
   useEffect(() => {
+    setError(null)
     if (!normalizedImageId) {
-      setResolvedImageId('')
+      setResolvedKey(viewKey)
       setView(null)
       setStatus('idle')
       return
@@ -45,10 +49,10 @@ export function useImageAssetView(
     }
     const handle = getImageView(normalizedImageId, variant)
     const cachedView = handle.displayUrl
-      ? { url: handle.displayUrl, metadata: handle.metadata } as ImageAssetView
+      ? { url: handle.displayUrl, metadata: metadataRequested ? handle.metadata : null } as ImageAssetView
       : null
     if (cachedView && (!metadataRequested || cachedView.metadata)) {
-      setResolvedImageId(normalizedImageId)
+      setResolvedKey(viewKey)
       setView(cachedView)
       setStatus('ready')
       return () => {
@@ -56,7 +60,7 @@ export function useImageAssetView(
       }
     }
 
-    setResolvedImageId(normalizedImageId)
+    setResolvedKey(viewKey)
     if (cachedView) {
       setView(cachedView)
     } else {
@@ -64,7 +68,7 @@ export function useImageAssetView(
     }
     setStatus('loading')
 
-    void getImageView(normalizedImageId, variant).reload().then(h => h.displayUrl ? { url: h.displayUrl, metadata: h.metadata } as ImageAssetView : null)
+    void handle.reload(viewOptions).then(h => h.displayUrl ? { url: h.displayUrl, metadata: metadataRequested ? h.metadata : null } as ImageAssetView : null)
       .then((nextView) => {
         if (cancelled) {
           return
@@ -78,11 +82,13 @@ export function useImageAssetView(
 
         setView(null)
         setStatus('error')
+        setError('图片资产不存在或没有可用地址')
       })
-      .catch(() => {
+      .catch((loadError) => {
         if (!cancelled) {
           setView(null)
           setStatus('error')
+          setError(loadError instanceof Error ? loadError.message : String(loadError))
         }
       })
 
@@ -95,15 +101,17 @@ export function useImageAssetView(
     metadataRequested,
     normalizedImageId,
     variant,
+    viewKey,
   ])
 
-  const isCurrentView = resolvedImageId === normalizedImageId
+  const isCurrentView = resolvedKey === viewKey
 
   return {
-    imageId: isCurrentView ? resolvedImageId : '',
+    imageId: isCurrentView ? normalizedImageId : '',
     view: isCurrentView ? view : null,
     url: isCurrentView ? view?.url ?? '' : '',
     metadata: isCurrentView ? view?.metadata ?? null : null,
-    status,
+    status: isCurrentView ? status : normalizedImageId ? 'loading' : 'idle',
+    error: isCurrentView ? error : null,
   }
 }

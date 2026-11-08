@@ -1,30 +1,39 @@
 import { ALL_CATEGORY_FILTER } from "@/types"
 import { normalizeCategoryList, resolveActiveCategoryFilter } from "@/store/domain"
+import type { AppState, StoreSetter } from '../contracts'
+import type { CategoryConfig, TaskRecord } from '@/types'
 
-export function createTaskSlice(set: any) {
+type TaskSlice = Pick<AppState,
+  | 'tasks' | 'setTasks' | 'selectedTaskIds' | 'setSelectedTaskIds' | 'toggleTaskSelection'
+  | 'clearSelectedTasks' | 'categories' | 'activeCategoryFilter' | 'setActiveCategoryFilter'
+  | 'replaceCategoryState' | 'searchQuery' | 'setSearchQuery' | 'filterStatus' | 'setFilterStatus'
+  | 'taskView' | 'setTaskView' | 'galleryDisplayMode' | 'setGalleryDisplayMode'
+>
+
+export function createTaskSlice(set: StoreSetter): TaskSlice {
   return {
-    tasks: [] as any[],
-    setTasks(tasks: any[]) {
-      set((state: any) => {
-        const taskIds = new Set(tasks.map((t: any) => t.id))
+    tasks: [],
+    setTasks(tasks: TaskRecord[]) {
+      set((state) => {
+        const taskIds = new Set(tasks.map((t) => t.id))
         return {
           tasks,
           selectedTaskIds: state.selectedTaskIds.filter((id: string) => taskIds.has(id)),
-          imageEditSession: state.imageEditSession && taskIds.has(state.imageEditSession.taskId) ? state.imageEditSession : null,
+          imageEditSession: state.imageEditSession && (state.imageEditSession.taskId === 'input-image' || taskIds.has(state.imageEditSession.taskId)) ? state.imageEditSession : null,
           detailTaskId: state.detailTaskId && taskIds.has(state.detailTaskId) ? state.detailTaskId : null,
         }
       })
     },
-    selectedTaskIds: [] as any[],
+    selectedTaskIds: [],
     setSelectedTaskIds(ids: string[]) {
-      set((state: any) => {
-        const taskIds = new Set(state.tasks.map((t: any) => t.id))
+      set((state) => {
+        const taskIds = new Set(state.tasks.map((t) => t.id))
         return { selectedTaskIds: Array.from(new Set(ids)).filter((id: string) => taskIds.has(id)) }
       })
     },
     toggleTaskSelection(id: string) {
-      set((state: any) => {
-        if (!state.tasks.some((t: any) => t.id === id)) return state
+      set((state) => {
+        if (!state.tasks.some((t) => t.id === id)) return state
         const selectedTaskIds = state.selectedTaskIds.includes(id)
           ? state.selectedTaskIds.filter((taskId: string) => taskId !== id)
           : [...state.selectedTaskIds, id]
@@ -33,12 +42,12 @@ export function createTaskSlice(set: any) {
     },
     clearSelectedTasks() { set({ selectedTaskIds: [] }) },
 
-    categories: [] as any[],
-    activeCategoryFilter: ALL_CATEGORY_FILTER as any ,
+    categories: [],
+    activeCategoryFilter: ALL_CATEGORY_FILTER,
     setActiveCategoryFilter(activeCategoryFilter: string) {
-      set((state: any) => ({ activeCategoryFilter: resolveActiveCategoryFilter(activeCategoryFilter, state.categories) }))
+      set((state) => ({ activeCategoryFilter: resolveActiveCategoryFilter(activeCategoryFilter, state.categories) }))
     },
-    replaceCategoryState(categories: any, activeCategoryFilter?: string) {
+    replaceCategoryState(categories: CategoryConfig[], activeCategoryFilter?: string) {
       set(() => {
         const normalizedCategories = normalizeCategoryList(categories)
         return { categories: normalizedCategories, activeCategoryFilter: resolveActiveCategoryFilter(activeCategoryFilter, normalizedCategories) }
@@ -46,11 +55,11 @@ export function createTaskSlice(set: any) {
     },
     searchQuery: "",
     setSearchQuery(searchQuery: string) { set({ searchQuery }) },
-    filterStatus: "all" as any ,
-    setFilterStatus(filterStatus: string) { set({ filterStatus }) },
-    taskView: "gallery" as any ,
-    setTaskView(taskView: string) { set({ taskView, selectedTaskIds: [], imageEditSession: null, detailTaskId: null }) },
-    galleryDisplayMode: "standard" as any ,
-    setGalleryDisplayMode(galleryDisplayMode: string) { set({ galleryDisplayMode }) },
+    filterStatus: "all",
+    setFilterStatus(filterStatus) { set({ filterStatus }) },
+    taskView: "gallery",
+    setTaskView(taskView) { set({ taskView, selectedTaskIds: [], imageEditSession: null, detailTaskId: null }) },
+    galleryDisplayMode: "standard",
+    setGalleryDisplayMode(galleryDisplayMode) { set({ galleryDisplayMode }) },
   }
 }

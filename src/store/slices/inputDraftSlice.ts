@@ -1,48 +1,56 @@
 import { createPromptLibraryItem, normalizePromptLibraryItems } from "@/store/domain"
 import { evictImage } from "@/store/imageAssets"
 import { DEFAULT_PARAMS } from "@/store/taskParams"
+import type { AppState, StoreSetter } from '../contracts'
+import type { InputImage, PromptLibraryItem, TaskParams } from '@/types'
 
-export function createInputDraftSlice(set: any) {
+type InputDraftSlice = Pick<AppState,
+  | 'prompt' | 'setPrompt' | 'promptLibrary' | 'replacePromptLibrary' | 'savePromptLibraryItem'
+  | 'removePromptLibraryItem' | 'inputImages' | 'addInputImage' | 'removeInputImage'
+  | 'clearInputImages' | 'setInputImages' | 'params' | 'setParams'
+>
+
+export function createInputDraftSlice(set: StoreSetter): InputDraftSlice {
   return {
     prompt: "",
     setPrompt(prompt: string) { set({ prompt }) },
 
-    promptLibrary: [] as any[],
-    replacePromptLibrary(promptLibrary: any) {
+    promptLibrary: [],
+    replacePromptLibrary(promptLibrary: PromptLibraryItem[]) {
       set(() => ({ promptLibrary: normalizePromptLibraryItems(promptLibrary) }))
     },
     savePromptLibraryItem(input: { title?: string; content: string }) {
       const nextItem = createPromptLibraryItem(input.content, input.title)
-      set((state: any) => ({
-        promptLibrary: [nextItem, ...state.promptLibrary.filter((item: any) => item.id !== nextItem.id)],
+      set((state) => ({
+        promptLibrary: [nextItem, ...state.promptLibrary.filter((item) => item.id !== nextItem.id)],
       }))
       return nextItem
     },
     removePromptLibraryItem(id: string) {
-      set((state: any) => ({ promptLibrary: state.promptLibrary.filter((item: any) => item.id !== id) }))
+      set((state) => ({ promptLibrary: state.promptLibrary.filter((item) => item.id !== id) }))
     },
 
-    inputImages: [] as any[],
-    addInputImage(image: any) {
-      set((state: any) => {
-        if (state.inputImages.find((item: any) => item.id === image.id)) return state
+    inputImages: [],
+    addInputImage(image: InputImage) {
+      set((state) => {
+        if (state.inputImages.find((item) => item.id === image.id)) return state
         return { inputImages: [...state.inputImages, image] }
       })
     },
     removeInputImage(index: number) {
-      set((state: any) => ({ inputImages: state.inputImages.filter((_: any, i: number) => i !== index) }))
+      set((state) => ({ inputImages: state.inputImages.filter((_, i) => i !== index) }))
     },
     clearInputImages() {
-      set((state: any) => {
+      set((state) => {
         for (const image of state.inputImages) evictImage(image.id)
         return { inputImages: [] }
       })
     },
-    setInputImages(inputImages: any[]) { set({ inputImages }) },
+    setInputImages(inputImages: InputImage[]) { set({ inputImages }) },
 
     params: { ...DEFAULT_PARAMS },
-    setParams(params: any) {
-      set((state: any) => ({ params: { ...state.params, ...params } }))
+    setParams(params: Partial<TaskParams>) {
+      set((state) => ({ params: { ...state.params, ...params } }))
     },
   }
 }

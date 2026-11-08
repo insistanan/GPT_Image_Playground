@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SquareShareKind, SquareShareSummary } from '@/types'
 import { isSquareApiConfigured, squareApiClient } from '@/features/square/lib/squareApiClient'
 
@@ -18,10 +18,22 @@ export function useSquareFeed({ kind, query }: UseSquareFeedOptions) {
   const configured = isSquareApiConfigured()
   const normalizedQuery = query.trim()
 
-  const resetKey = useMemo(() => `${kind}:${normalizedQuery}`, [kind, normalizedQuery])
+  const requestVersion = useRef(0)
+  const pageAbort = useRef<AbortController | null>(null)
+  const moreAbort = useRef<AbortController | null>(null)
+  const loadingMoreVersion = useRef<number | null>(null)
 
   const loadFirstPage = useCallback(async () => {
+    const version = ++requestVersion.current
+    pageAbort.current?.abort()
+    moreAbort.current?.abort()
+    const controller = new AbortController()
+    pageAbort.current = controller
+    loadingMoreVersion.current = null
+    setIsLoadingMore(false)
+    setNextCursor(null)
     if (!configured) {
+      setIsLoading(false)
       setItems([])
       setNextCursor(null)
       setError(null)
@@ -35,25 +47,31 @@ export function useSquareFeed({ kind, query }: UseSquareFeedOptions) {
         ? await squareApiClient.listMyShares({
             q: normalizedQuery,
             limit: 30,
-          })
+          }, controller.signal)
         : await squareApiClient.listSquare({
             kind,
             q: normalizedQuery,
             limit: 30,
-          })
+          }, controller.signal)
+      if (version !== requestVersion.current || controller.signal.aborted) return
       setItems(result.items)
       setNextCursor(result.nextCursor)
     } catch (loadError) {
+      if (version !== requestVersion.current || controller.signal.aborted) return
       setItems([])
       setNextCursor(null)
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
-      setIsLoading(false)
+      if (version === requestVersion.current) setIsLoading(false)
     }
   }, [configured, kind, normalizedQuery])
 
   const loadMore = useCallback(async () => {
-    if (!configured || !nextCursor || isLoadingMore) return
+    const version = requestVersion.current
+    if (!configured || !nextCursor || isLoading || loadingMoreVersion.current === version) return
+    loadingMoreVersion.current = version
+    const controller = new AbortController()
+    moreAbort.current = controller
 
     setIsLoadingMore(true)
     setError(null)
@@ -63,25 +81,38 @@ export function useSquareFeed({ kind, query }: UseSquareFeedOptions) {
             q: normalizedQuery,
             cursor: nextCursor,
             limit: 30,
-          })
+          }, controller.signal)
         : await squareApiClient.listSquare({
             kind,
             q: normalizedQuery,
             cursor: nextCursor,
             limit: 30,
-          })
-      setItems((current) => [...current, ...result.items])
+          }, controller.signal)
+      if (version !== requestVersion.current || controller.signal.aborted) return
+      setItems((current) => {
+        const ids = new Set(current.map((item) => item.id))
+        return [...current, ...result.items.filter((item) => !ids.has(item.id))]
+      })
       setNextCursor(result.nextCursor)
     } catch (loadError) {
+      if (version !== requestVersion.current || controller.signal.aborted) return
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
-      setIsLoadingMore(false)
+      if (version === requestVersion.current) {
+        loadingMoreVersion.current = null
+        setIsLoadingMore(false)
+      }
     }
-  }, [configured, isLoadingMore, kind, nextCursor, normalizedQuery])
+  }, [configured, isLoading, kind, nextCursor, normalizedQuery])
 
   useEffect(() => {
     void loadFirstPage()
-  }, [loadFirstPage, resetKey])
+    return () => {
+      requestVersion.current += 1
+      pageAbort.current?.abort()
+      moreAbort.current?.abort()
+    }
+  }, [loadFirstPage])
 
   return {
     items,

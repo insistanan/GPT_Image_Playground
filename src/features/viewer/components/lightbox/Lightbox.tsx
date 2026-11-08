@@ -1,7 +1,7 @@
 import { useCloseOnEscape } from '@/hooks/useCloseOnEscape'
-import LightboxViewport from './LightboxViewport'
+import LightboxViewport from '@/shared/components/image-viewer/LightboxViewport'
 import { useLightboxState } from './useLightboxState'
-import { useLightboxTransform } from './useLightboxTransform'
+import { useLightboxTransform } from '@/shared/components/image-viewer/useLightboxTransform'
 
 export default function Lightbox() {
   const { lightboxImageId, src, close, showNav, currentIndex, total, goPrev, goNext } = useLightboxState()

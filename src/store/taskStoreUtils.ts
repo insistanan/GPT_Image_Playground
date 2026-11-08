@@ -6,14 +6,12 @@ import {
   resolveActiveCategoryFilter,
 } from './domain'
 
-export function updateTaskInStore(taskId: string, patch: Partial<TaskRecord>) {
+export async function updateTaskInStore(taskId: string, patch: Partial<TaskRecord>) {
+  const task = useStore.getState().tasks.find((item) => item.id === taskId)
+  if (!task) throw new Error(`任务不存在：${taskId}`)
+  await putTask({ ...task, ...patch })
   const { tasks, setTasks } = useStore.getState()
-  const updatedTasks = tasks.map((task) => (task.id === taskId ? { ...task, ...patch } : task))
-  setTasks(updatedTasks)
-  const updatedTask = updatedTasks.find((task) => task.id === taskId)
-  if (updatedTask) {
-    void putTask(updatedTask)
-  }
+  setTasks(tasks.map((item) => item.id === taskId ? { ...item, ...patch } : item))
 }
 
 export function clearTaskUiState(taskIds: Set<string>) {

@@ -143,6 +143,18 @@ async function executeResponsesRequest(
   ctx: SharedRequestContext,
   preparedInput: ResponsesPreparedInput,
 ): Promise<CallApiResult> {
+  let requestHasFinalImages = false
+  const onFinalImages = opts.onFinalImages
+  opts = {
+    ...opts,
+    onFinalImages: async (images) => {
+      if (images.length) {
+        requestHasFinalImages = true
+        ctx.finalImagesReceived = true
+      }
+      await onFinalImages?.(images)
+    },
+  }
   const images: ApiImageAsset[] = []
   const responseImageGenerationCalls: Parameters<typeof buildTaskResponseMetaFromCalls>[0] = []
   let finalTransportMeta: AppliedTransportMeta | undefined
@@ -190,6 +202,7 @@ async function executeResponsesRequest(
         shouldReadAsStream,
         debugLogEntry,
         opts.onPartialImage,
+        opts.onFinalImages,
       )
       for (const call of normalized.imageGenerationCalls) {
         responseImageGenerationCalls.push(call)
@@ -202,7 +215,9 @@ async function executeResponsesRequest(
       }
       break
     } catch (error) {
-      if (!planner.failAndAdvance(error)) {
+      if (requestHasFinalImages ||
+          (opts.params.n > 1 && isUnsupportedOutputCountError(error)) ||
+          !planner.failAndAdvance(error)) {
         throw normalizeModerationRejectionError(error)
       }
     }
@@ -240,11 +255,20 @@ async function executeResponsesRequestsConcurrently(
   const successfulResults = results.filter(
     (result): result is PromiseFulfilledResult<CallApiResult> => result.status === 'fulfilled',
   )
+  const failures = results.flatMap((result, requestIndex) => result.status === 'rejected'
+    ? [{ requestIndex, message: result.reason instanceof Error ? result.reason.message : String(result.reason) }]
+    : [])
   if (!successfulResults.length) {
     const firstRejected = results.find(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
     )
     throw firstRejected?.reason ?? createApiError('Responses API 未返回可用图片数据')
+  }
+
+  if (failures.length) {
+    throw createApiError(`多图生成部分失败：${failures.map((failure) => failure.message).join('；')}`, undefined, {
+      details: { failures, successfulRequestCount: successfulResults.length, requestedRequestCount: count },
+    })
   }
 
   return mergeCallResults(successfulResults.map((result) => result.value))
@@ -277,7 +301,7 @@ export async function callResponsesApi(
       )
       return mergeCallResults([nativeResult, remainderResult])
     } catch (error) {
-      if (!shouldFallbackToConcurrentN(error, requestedImageCount)) {
+      if (ctx.finalImagesReceived || !shouldFallbackToConcurrentN(error, requestedImageCount)) {
         throw error
       }
 

@@ -1,30 +1,18 @@
+import { publishShare } from '../services/sharePublish'
 import { getConfig } from '../config'
 import {
-  assertQuotaAvailable,
-  consumeQuota,
-  createAssetId,
-  createShareId,
   enforceRateLimit,
-  findExistingShareByRequest,
   getPublisherByRequest,
-  releaseQuotaBestEffort,
 } from '../db'
 import { forbidden, notFound, validationFailed } from '../errors'
 import { getClientIp } from '../request'
 import { jsonOk } from '../response'
 import {
-  assertSquareCapacityAvailable,
-  getUploadedAssetsStorageBytes,
   purgeShareAssets,
-  releaseStorageBytesBestEffort,
-  reserveStorageBytes,
 } from '../storage'
 import { validateTurnstileIfNeeded } from '../turnstile'
 import type {
   RequestContext,
-  ShareManifest,
-  StoredAssetRow,
-  UploadedAsset,
 } from '../types'
 import { readCreateShareRequest } from '../validation'
 
@@ -35,223 +23,6 @@ function safeJsonArray(value: string | null): string[] {
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
   } catch {
     return []
-  }
-}
-
-function getCoverAssetId(rows: StoredAssetRow[]): string | null {
-  return rows.find((asset) => asset.role === 'output')?.id ?? rows[0]?.id ?? null
-}
-
-function buildR2Key(shareId: string, assetId: string, variant: 'original' | 'thumb'): string {
-  return `shares/${shareId}/assets/${assetId}/${variant}`
-}
-
-async function uploadAssets(
-  ctx: RequestContext,
-  shareId: string,
-  assets: UploadedAsset[],
-): Promise<StoredAssetRow[]> {
-  const rows: StoredAssetRow[] = []
-  for (const asset of assets) {
-    const assetId = createAssetId()
-    const r2Key = buildR2Key(shareId, assetId, 'original')
-    const thumbR2Key = buildR2Key(shareId, assetId, 'thumb')
-    let originalUploaded = false
-    try {
-      await ctx.env.IMAGES.put(r2Key, asset.original, {
-        httpMetadata: {
-          contentType: asset.original.type || asset.manifest.mimeType,
-        },
-        customMetadata: {
-          shareId,
-          assetId,
-          role: asset.manifest.role,
-        },
-      })
-      originalUploaded = true
-      await ctx.env.IMAGES.put(thumbR2Key, asset.thumbnail, {
-        httpMetadata: {
-          contentType: asset.thumbnail.type || 'image/webp',
-        },
-        customMetadata: {
-          shareId,
-          assetId,
-          role: asset.manifest.role,
-          variant: 'thumb',
-        },
-      })
-    } catch (error) {
-      if (originalUploaded) {
-        await ctx.env.IMAGES.delete(r2Key).catch(() => undefined)
-      }
-      throw error
-    }
-
-    rows.push({
-      id: assetId,
-      clientAssetId: asset.manifest.clientAssetId,
-      role: asset.manifest.role,
-      r2Key,
-      thumbR2Key,
-      mimeType: asset.original.type || asset.manifest.mimeType,
-      byteSize: asset.original.size,
-      thumbByteSize: asset.thumbnail.size,
-      width: asset.manifest.width ?? null,
-      height: asset.manifest.height ?? null,
-    })
-  }
-
-  return rows
-}
-
-async function deleteUploadedAssetsBestEffort(ctx: RequestContext, rows: StoredAssetRow[]): Promise<void> {
-  await Promise.all(
-    rows.flatMap((asset) => [
-      ctx.env.IMAGES.delete(asset.r2Key).catch(() => undefined),
-      ctx.env.IMAGES.delete(asset.thumbR2Key).catch(() => undefined),
-    ]),
-  )
-}
-
-function buildShareStatements(
-  ctx: RequestContext,
-  input: {
-    shareId: string
-    publisherId: string
-    manifest: ShareManifest
-    manifestJson: string
-    coverAssetId: string | null
-    assetRows: StoredAssetRow[]
-    now: number
-  },
-): D1PreparedStatement[] {
-  const config = getConfig(ctx.env)
-  const tagsJson = JSON.stringify(input.manifest.tags ?? [])
-  const statements = [
-    ctx.env.DB.prepare(
-      `INSERT INTO shares (
-         id,
-         publisher_id,
-         kind,
-         title,
-         prompt,
-         manifest_json,
-         cover_asset_id,
-         tags_json,
-         status,
-         client_request_id,
-         created_at,
-         updated_at
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(
-      input.shareId,
-      input.publisherId,
-      input.manifest.kind,
-      input.manifest.title,
-      input.manifest.prompt,
-      input.manifestJson,
-      input.coverAssetId,
-      tagsJson,
-      config.defaultShareStatus,
-      input.manifest.clientRequestId,
-      input.now,
-      input.now,
-    ),
-  ]
-
-  for (const asset of input.assetRows) {
-    statements.push(
-      ctx.env.DB.prepare(
-        `INSERT INTO share_assets (
-           id,
-           share_id,
-           client_asset_id,
-           role,
-           r2_key,
-           thumb_r2_key,
-           mime_type,
-           byte_size,
-           thumb_byte_size,
-           width,
-           height,
-           created_at
-         )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(
-        asset.id,
-        input.shareId,
-        asset.clientAssetId,
-        asset.role,
-        asset.r2Key,
-        asset.thumbR2Key,
-        asset.mimeType,
-        asset.byteSize,
-        asset.thumbByteSize,
-        asset.width,
-        asset.height,
-        input.now,
-      ),
-    )
-  }
-
-  return statements
-}
-
-async function storeShare(
-  ctx: RequestContext,
-  input: {
-    publisherId: string
-    manifest: ShareManifest
-    assets: UploadedAsset[]
-  },
-): Promise<string> {
-  const existingShare = await findExistingShareByRequest(
-    ctx.env,
-    input.publisherId,
-    input.manifest.clientRequestId,
-  )
-  if (existingShare) {
-    return existingShare.id
-  }
-
-  await assertQuotaAvailable(ctx.env, input.publisherId, input.manifest.kind)
-  await assertSquareCapacityAvailable(ctx.env)
-
-  const storageBytes = getUploadedAssetsStorageBytes(input.assets)
-  let storageReserved = false
-  await reserveStorageBytes(ctx.env, storageBytes)
-  storageReserved = storageBytes > 0
-
-  const shareId = createShareId()
-  let uploadedRows: StoredAssetRow[] = []
-  let quotaConsumed = false
-  try {
-    uploadedRows = await uploadAssets(ctx, shareId, input.assets)
-    await consumeQuota(ctx.env, input.publisherId, input.manifest.kind)
-    quotaConsumed = true
-    const now = Date.now()
-    await ctx.env.DB.batch(
-      buildShareStatements(ctx, {
-        shareId,
-        publisherId: input.publisherId,
-        manifest: input.manifest,
-        manifestJson: JSON.stringify(input.manifest),
-        coverAssetId: getCoverAssetId(uploadedRows),
-        assetRows: uploadedRows,
-        now,
-      }),
-    )
-    return shareId
-  } catch (error) {
-    await deleteUploadedAssetsBestEffort(ctx, uploadedRows)
-    if (quotaConsumed) {
-      await releaseQuotaBestEffort(ctx.env, input.publisherId, input.manifest.kind)
-    }
-    if (storageReserved) {
-      await releaseStorageBytesBestEffort(ctx.env, storageBytes)
-    }
-    throw error
   }
 }
 
@@ -274,7 +45,7 @@ export async function handleCreateShare(ctx: RequestContext): Promise<Response> 
 
   const { manifest, assets } = await readCreateShareRequest(ctx.env, ctx.request)
   await validateTurnstileIfNeeded(ctx, manifest.turnstileToken)
-  const shareId = await storeShare(ctx, {
+  const shareId = await publishShare(ctx, {
     publisherId: publisher.id,
     manifest,
     assets,

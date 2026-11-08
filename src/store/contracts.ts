@@ -12,6 +12,9 @@ import type {
   TaskRecord,
   TaskView,
 } from '@/types'
+import type { StoreApi } from 'zustand'
+
+export type StoreSetter = StoreApi<AppState>['setState']
 
 export interface AppState {
   appView: AppView

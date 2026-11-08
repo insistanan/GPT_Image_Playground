@@ -1,7 +1,7 @@
 export { createCategory, deleteCategory, moveTaskToCategory, moveTasksToCategory, purgeTask, purgeTasks, removeTask, removeTasks, renameCategory, restoreTask, restoreTasks, reuseConfig, setTasksFavorite, toggleTaskFavorite } from './gallery'
 export { addImageFromFile, addImageFromUrl, clearAllData, exportData, importData, normalizeImageUrl } from './dataTransfer'
 export { applyGalleryTaskDetailAction, confirmGalleryBatchPurgeTasks, confirmGalleryBatchRemoveTasks, confirmGalleryBatchRestoreTasks, confirmGalleryClearFailedTasks, confirmGalleryDeleteCategory, confirmGalleryPurgeTask, confirmGalleryRemoveTask, confirmGalleryRestoreTask, openGalleryMoveCategoryDialog, openGalleryTaskDetail, runGalleryAbort, runGalleryBatchFavorite, runGalleryBatchMoveToCategory, runGalleryCreateCategory, runGalleryEditOutputs, runGalleryRenameCategory, runGalleryRetry, runGalleryReuse, runGalleryToggleFavorite, runGalleryMoveTaskToCategory } from './galleryCommands'
-export { ensureImageAssetDataUrl, ensureImageAssetMetadata, ensureImageAssetUrl, ensureImageAssetView, evictImage, getCachedImageAssetMetadata, getCachedImageAssetUrl, getCachedImageAssetView, getImageView, listImages, removeImage, storeImage, type ImageHandle, type StoreImageOptions } from './imageAssets'
+export { evictImage, getImageView, listImages, removeImage, storeImage, type ImageHandle, type StoreImageOptions } from './imageAssets'
 export { applyImageEditToInput, clearInputImageEdit, closeImageEditor, editOutputs, reopenImageEditorFromInputImage } from './imageEditActions'
 export { closeLightbox, openLightbox } from './lightboxWorkflow'
 export { createSingleImageTasksFromFiles } from './imageTaskActions'

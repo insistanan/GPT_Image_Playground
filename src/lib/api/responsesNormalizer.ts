@@ -39,11 +39,12 @@ export async function normalizeResponsesResponse(
   shouldReadAsStream: boolean,
   debugLogEntry?: ApiDebugRequestLogEntry,
   onPartialImage?: CallApiOptions['onPartialImage'],
+  onFinalImages?: CallApiOptions['onFinalImages'],
 ): Promise<NormalizedResponsesResult> {
   let actualTransport: ActualTransportKind = "json"
 
   const streamResult = shouldReadAsStream
-    ? await readResponsesPayloadStream(response, mime, signal, debugLogEntry, onPartialImage)
+    ? await readResponsesPayloadStream(response, mime, signal, debugLogEntry, onPartialImage, onFinalImages)
     : null
 
   const payload = streamResult?.payload ?? (await readResponsesPayload(response, debugLogEntry))

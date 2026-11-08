@@ -97,9 +97,9 @@ export async function runGalleryBatchMoveToCategory(tasks: TaskRecord[], categor
   }
 }
 
-export function runGalleryCreateCategory(name: string): boolean {
+export async function runGalleryCreateCategory(name: string): Promise<boolean> {
   try {
-    createCategory(name)
+    await createCategory(name)
     return true
   } catch (error) {
     showErrorToast(error)

@@ -52,7 +52,7 @@
 - IndexedDB 本地持久化、SHA-256 去重、ZIP 导入导出。
 - 完整报错会随任务一起保存在浏览器本地，并在 15 天后自动清理。
 - 本地代理模式下，开发服务器仍会额外把成功和失败请求写入 `logs/` 目录，便于本机排查。
-- 内置 `vitest` 测试脚本，覆盖请求规划、SSE 读取与 payload 归一化等协议层逻辑。
+- 内置 `vitest` 测试脚本，包含请求规划、SSE 最终图片交付、任务中断、导入校验、事务提交与广场上传补偿的回归用例。
 - PWA 基础支持，可离线缓存应用壳资源。
 
 ## 架构一览
@@ -75,22 +75,26 @@ React UI
   │  └─ viewer/components/
   │     ├─ detail-modal/         详情弹窗按预览区、信息区、图片状态 hook 拆分
   │     ├─ image-edit-modal/     局部编辑弹窗按画布区、侧栏、选区 hook、状态 hook 拆分
-  │     ├─ lightbox/             大图查看按状态导航、缩放手势、视图壳层拆分
+  │     ├─ lightbox/             大图查看的业务导航，展示与缩放复用 shared
   │     └─ ...                   大图查看、局部编辑等查看器模块
-  ├─ shared/components/          通用弹窗、Toast、Select 等共享组件
+  ├─ shared/components/          通用弹窗、Toast、Select 与 image-viewer 大图交互
   ├─ store/                      状态管理、任务编排、分类/收藏/回收站、导入导出
   │  ├─ slices/                  provider / inputDraft / task / viewer / dialog 基础切片
-  │  └─ taskRunner / gallery     任务运行时与画廊领域动作继续拆分
+  │  ├─ domain/                  供应商、分类、提示词、备份关联规则
+  │  ├─ data-transfer/           ZIP 归档处理与导入格式校验
+  │  └─ dataMutation.ts          本地写入队列与数据重置版本
   ├─ lib/capabilities/           模型目录、官方字段兼容与参数收口
   ├─ lib/api/                    Images API / Responses API / SSE 解析 / 请求规划 / 响应归一化
   │  └─ __tests__/               协议层单测
-  ├─ lib/db/                     IndexedDB schema / task / image 读写与迁移
+  ├─ lib/db/                     IndexedDB schema / task / image / archive 原子导入
   ├─ IndexedDB + 内存缓存        图片、任务、完整错误日志持久化、去重、按需读取
   ├─ Dev Proxy Logger            本地代理请求转发与开发机 success/error 日志落盘
   └─ PWA Shell                   manifest + service worker
 
 workers/square-api
   ├─ src/                         图片分享广场 API 路由、校验、配额、用量统计、R2 资产读取
+  │  └─ services/sharePublish.ts   发布编排与上传失败补偿
+  ├─ tests/                       上传补偿回归用例
   ├─ migrations/                  D1 数据库迁移
   └─ wrangler.example.jsonc       Cloudflare Worker / D1 / R2 binding 示例配置
 ```
@@ -128,6 +132,16 @@ workers/square-api
 
 - 状态切片与领域模块
   `src/store/state.ts` 只做 store 装配，基础状态拆到 `src/store/slices/*`，任务运行时、画廊动作、图片资产、回收站清理等继续保持独立模块，避免再回到单文件大 store。
+  供应商、分类、提示词与备份关联规则位于 `src/store/domain/*`；画廊动作统一经由 `collectionActions -> galleryMutations`，不保留平行实现。
+
+- 本地写入与恢复
+  本地提交与清理在同一队列中执行，落库成功后更新内存状态；清空数据会取消运行请求并使旧结果失效。刷新后遗留的运行中任务会转为中断状态，保留已完成图片。当前协调范围为同一页面，多标签页写入尚未通过跨页面锁统一协调。
+
+- 备份导入与导出
+  ZIP 使用异步压缩与解压，导入先校验 v6 至 v9 格式、任务与图片元数据，再在同一 IndexedDB 事务内提交图片与任务。供应商等配置保存在 localStorage，配置恢复失败会明确报告，不能保证与 IndexedDB 跨介质原子提交。归档仍需在内存中持有文件内容。
+
+- 广场上传补偿
+  发布服务在上传前登记对象 key，失败后补偿原图与缩略图；清理失败会记录日志并保留存储预留额度。D1 提交结果不确定时先查询确认。当前补偿没有持久化重试队列，持续故障仍需根据日志核对并清理对象和额度。
 
 - DB 分层
   IndexedDB 访问已拆到 `src/lib/db/schema.ts`、`src/lib/db/tasks.ts`、`src/lib/db/images.ts`，分别处理 schema、任务记录和图片记录/迁移逻辑，避免协议层和 UI 直接接触底层存储细节。
@@ -413,12 +427,15 @@ Invoke-RestMethod "$api/api/v1/admin/cleanup" `
 │  │  ├─ api/
 │  │  │  └─ __tests__/          协议层单测
 │  │  ├─ capabilities/          模型目录、官方字段兼容与参数收口
-│  │  ├─ db/                    schema / tasks / images
+│  │  ├─ db/                    schema / tasks / images / archive
 │  │  ├─ devProxy.ts            本地代理辅助
 │  │  └─ size.ts                尺寸处理
-│  ├─ shared/                   共享组件
+│  ├─ shared/                   共享组件与 image-viewer 大图交互
 │  ├─ store/
 │  │  ├─ slices/                provider / inputDraft / task / viewer / dialog
+│  │  ├─ domain/                供应商 / 分类 / 提示词 / 备份关联
+│  │  ├─ data-transfer/         归档处理 / 导入校验
+│  │  ├─ dataMutation.ts        本地写入协调与数据版本
 │  │  └─ ...                    gallery、taskRunner、imageAssets 等领域模块
 │  ├─ App.tsx                   应用骨架
 │  ├─ main.tsx                  入口与 Service Worker 注册

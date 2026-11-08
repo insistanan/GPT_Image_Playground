@@ -248,7 +248,7 @@ export async function reserveStorageBytes(env: Env, bytes: number): Promise<void
   }
 }
 
-export async function releaseStorageBytesBestEffort(env: Env, bytes: number): Promise<void> {
+export async function releaseStorageBytes(env: Env, bytes: number): Promise<void> {
   if (bytes <= 0) return
   await env.DB.prepare(
     `UPDATE storage_counters
@@ -258,7 +258,6 @@ export async function releaseStorageBytesBestEffort(env: Env, bytes: number): Pr
   )
     .bind(bytes, bytes, Date.now(), STORAGE_COUNTER_KEY)
     .run()
-    .catch(() => undefined)
 }
 
 async function readShareAssets(env: Env, shareId: string): Promise<ShareAssetObject[]> {
@@ -298,7 +297,7 @@ export async function purgeShareAssets(env: Env, shareId: string): Promise<{
   await env.DB.prepare('DELETE FROM share_assets WHERE share_id = ?')
     .bind(shareId)
     .run()
-  await releaseStorageBytesBestEffort(env, freedBytes)
+  await releaseStorageBytes(env, freedBytes)
 
   return {
     assetCount: assets.length,
@@ -318,7 +317,7 @@ async function purgeShare(env: Env, shareId: string): Promise<{
     env.DB.prepare('DELETE FROM share_assets WHERE share_id = ?').bind(shareId),
     env.DB.prepare('DELETE FROM shares WHERE id = ?').bind(shareId),
   ])
-  await releaseStorageBytesBestEffort(env, freedBytes)
+  await releaseStorageBytes(env, freedBytes)
 
   return {
     assetCount: assets.length,

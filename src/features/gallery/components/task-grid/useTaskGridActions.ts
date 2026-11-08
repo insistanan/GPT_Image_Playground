@@ -54,34 +54,6 @@ export function useTaskGridActions(options: UseTaskGridActionsOptions) {
     shouldSuppressTaskOpen,
   } = options
 
-  const handleDelete = useCallback(
-    (task: TaskRecord) => {
-      confirmGalleryRemoveTask(task)
-    },
-    [],
-  )
-
-  const handleRestore = useCallback(
-    (task: TaskRecord) => {
-      confirmGalleryRestoreTask(task)
-    },
-    [],
-  )
-
-  const handlePurge = useCallback(
-    (task: TaskRecord) => {
-      confirmGalleryPurgeTask(task)
-    },
-    [],
-  )
-
-  const handleAbort = useCallback(
-    (task: TaskRecord) => {
-      runGalleryAbort(task)
-    },
-    [],
-  )
-
   const handleToggleAllVisible = useCallback(() => {
     if (!hasVisibleTasks) return
 
@@ -168,10 +140,10 @@ export function useTaskGridActions(options: UseTaskGridActionsOptions) {
   )
 
   return {
-    handleDelete,
-    handleRestore,
-    handlePurge,
-    handleAbort,
+    handleDelete: confirmGalleryRemoveTask,
+    handleRestore: confirmGalleryRestoreTask,
+    handlePurge: confirmGalleryPurgeTask,
+    handleAbort: runGalleryAbort,
     handleToggleAllVisible,
     handleBatchDelete,
     handleBatchRestore,

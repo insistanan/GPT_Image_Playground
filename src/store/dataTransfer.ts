@@ -1,152 +1,79 @@
-import { zipSync, unzipSync, strFromU8, strToU8 } from 'fflate'
-import {
-  clearTasks as dbClearTasks,
-  getAllTasks,
-  putTask,
-} from '@/lib/db'
-import type {
-  AppSettings,
-  CategoryConfig,
-  ExportData,
-  ExportImageFileEntry,
-  GalleryDisplayMode,
-  ProviderConfig,
-  StoredImage,
-  TaskParams,
-} from '@/types'
+import { strFromU8, strToU8 } from 'fflate'
+import { getAllTasks, putTasks } from '@/lib/db'
+import { commitImportedRecords } from '@/lib/db/archive'
+import { STORE_IMAGES, STORE_TASKS, writeDbBatch } from '@/lib/db/schema'
+import type { AppSettings, CategoryConfig, ExportData, GalleryDisplayMode, ProviderConfig, StoredImage, TaskParams } from '@/types'
 import type { PersistedAppStateSnapshot } from './contracts'
 import {
-  getImportedCategoriesFromExport,
-  getImportedPromptLibraryFromExport,
-  getImportedProvidersFromExport,
-  getTaskReferencedImageIds,
-  mergeImportedCategories,
-  mergePromptLibraryItems,
-  mergeImportedProviders,
-  remapImportedTaskRelations,
+  getImportedCategoriesFromExport, getImportedPromptLibraryFromExport, getImportedProvidersFromExport,
+  getTaskReferencedImageIds, mergeImportedCategories, mergePromptLibraryItems,
+  mergeImportedProviders, remapImportedTaskRelations, mergeImportedItemsWithLiveState,
 } from './domain'
-import {
-  clearImageAssets,
-  listImages,
-  storeImage,
-} from './imageAssets'
+import { clearImageAssetCaches, listImages, storeImage } from './imageAssets'
 import { buildPersistedAppStateSnapshot, readPersistedAppStateSnapshot } from './persistedState'
 import { useStore } from './state'
 import { repairCategoryStateFromTasks } from './taskStoreUtils'
-import {
-  getImageExtensionFromMimeType,
-  getImageMimeTypeFromPath,
-} from '@/lib/imageMime'
-import { isRemoteImageUrl } from '@/lib/imageUrl'
-import {
-  clampOutputImageCount,
-  isTaskBackground,
-  isTaskComplexity,
-  isTaskInputFidelity,
-  isTaskQuality,
-} from '@/lib/capabilities'
-import { DEFAULT_PARAMS, resolveTaskParamSizeOrDefault } from './taskParams'
-
-interface PreparedImportedRemoteImage {
-  id: string
-  mode: 'remote_url'
-  remoteUrl: string
-  info: ExportImageFileEntry
-}
-
-interface PreparedImportedBlobImage {
-  id: string
-  mode: 'local_blob'
-  originalBlob: Blob
-  thumbnailBlob?: Blob | null
-  info: ExportImageFileEntry
-}
-
-type PreparedImportedImage = PreparedImportedRemoteImage | PreparedImportedBlobImage
-
-function toOwnedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const ownedBytes = new Uint8Array(bytes.length)
-  ownedBytes.set(bytes)
-  return ownedBytes.buffer
-}
+import { DEFAULT_PARAMS } from './taskParams'
+import { assertDataVersion, getDataVersion, resetLocalData, withDataMutation } from './dataMutation'
+import { cancelAllTaskExecutions } from './taskExecutor'
+import { initStore } from './taskMaintenance'
+import { assertImportedImageIdsCompatible, exportImageRecord, prepareImportedImageRecord, toOwnedArrayBuffer, unzipArchive, zipArchive } from './data-transfer/archive'
+import { parseExportManifest, parseImportedParams } from './data-transfer/manifest'
+import { recoverInterruptedTask } from './taskRecords'
 
 export async function clearAllData() {
-  await dbClearTasks()
-  await clearImageAssets()
+  cancelAllTaskExecutions()
+  await resetLocalData(async () => {
+    try {
+      await writeDbBatch([STORE_TASKS, STORE_IMAGES], (transaction) => {
+        transaction.objectStore(STORE_TASKS).clear()
+        transaction.objectStore(STORE_IMAGES).clear()
+      })
+    } catch (error) {
+      // 请求已取消且旧版本不可再写回，清空失败也必须结束这些任务。
+      const { tasks, setTasks } = useStore.getState()
+      const now = Date.now()
+      const recoveredTasks = tasks.map((task) => recoverInterruptedTask(task, now))
+      setTasks(recoveredTasks)
+      try {
+        await putTasks(recoveredTasks.filter((task, index) => task !== tasks[index]))
+      } catch (saveError) {
+        throw new Error(`清空失败：${error instanceof Error ? error.message : String(error)}；中断任务状态保存失败：${saveError instanceof Error ? saveError.message : String(saveError)}`)
+      }
+      throw error
+    }
+    clearImageAssetCaches()
 
-  const {
-    setTasks,
-    clearInputImages,
-    replaceProviderState,
-    replaceCategoryState,
-    replacePromptLibrary,
-    setParams,
-    setTaskView,
-    setImageEditSession,
-    setShowPromptLibrary,
-    showToast,
-  } = useStore.getState()
+    const {
+      setTasks,
+      setPrompt,
+      clearInputImages,
+      replaceProviderState,
+      replaceCategoryState,
+      replacePromptLibrary,
+      setParams,
+      setTaskView,
+      setImageEditSession,
+      setShowPromptLibrary,
+      setLightboxImageId,
+      setShareToSquareTarget,
+      showToast,
+    } = useStore.getState()
 
-  setTasks([])
-  clearInputImages()
-  replaceProviderState([])
-  replaceCategoryState([])
-  replacePromptLibrary([])
-  setParams({ ...DEFAULT_PARAMS })
-  setTaskView('gallery')
-  setImageEditSession(null)
-  setShowPromptLibrary(false)
-  showToast('所有数据已清空', 'success')
-}
-
-function dataUrlToBytes(dataUrl: string): { mimeType: string; ext: string; bytes: Uint8Array } {
-  const normalized = dataUrl.trim()
-  const headerMatch = /^data:([^;,]+);base64,/i.exec(normalized)
-  if (!headerMatch) {
-    throw new Error('只支持 base64 data URL 图片导出')
-  }
-
-  const mimeType = headerMatch[1].toLowerCase()
-  const ext = resolveExtensionFromMimeType(mimeType)
-  const base64 = normalized.slice(headerMatch[0].length)
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-
-  return { mimeType, ext, bytes }
-}
-
-async function blobToBytes(blob: Blob): Promise<Uint8Array> {
-  return new Uint8Array(await blob.arrayBuffer())
-}
-
-function resolveExtensionFromMimeType(mimeType: string | null | undefined): string {
-  return getImageExtensionFromMimeType(mimeType)
-}
-
-function resolveMimeTypeFromPath(filePath: string, fallbackMimeType?: string | null): string {
-  return getImageMimeTypeFromPath(filePath, fallbackMimeType ?? 'image/png')
-}
-
-function createImageArchivePath(id: string, mimeType: string | null | undefined, suffix?: string): string {
-  const ext = resolveExtensionFromMimeType(mimeType)
-  return suffix ? `images/${id}.${suffix}.${ext}` : `images/${id}.${ext}`
-}
-
-function normalizeOptionalFiniteNumber(value: unknown): number | null | undefined {
-  if (value === undefined || value === null) {
-    return value
-  }
-  return typeof value === 'number' && Number.isFinite(value) ? value : null
-}
-
-function normalizeOptionalSource(value: unknown): 'upload' | 'generated' | undefined {
-  if (value === 'upload' || value === 'generated') {
-    return value
-  }
-  return undefined
+    setTasks([])
+    setPrompt('')
+    clearInputImages()
+    replaceProviderState([])
+    replaceCategoryState([])
+    replacePromptLibrary([])
+    setParams({ ...DEFAULT_PARAMS })
+    setTaskView('gallery')
+    setImageEditSession(null)
+    setShowPromptLibrary(false)
+    setLightboxImageId(null)
+    setShareToSquareTarget(null)
+    showToast('所有数据已清空', 'success')
+  })
 }
 
 function normalizeOptionalString(value: unknown): string | null | undefined {
@@ -154,14 +81,6 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
     return value
   }
   return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
-function isTaskOutputFormat(value: unknown): value is TaskParams['output_format'] {
-  return value === 'png' || value === 'jpeg' || value === 'webp' || value === 'gif' || value === 'svg'
-}
-
-function isTaskModeration(value: unknown): value is TaskParams['moderation'] {
-  return value === 'auto' || value === 'low'
 }
 
 function getImportedActiveProviderId(
@@ -199,207 +118,15 @@ function getImportedGalleryDisplayMode(
     : null
 }
 
-function getImportedParams(
-  data: ExportData,
-  persistedStateSnapshot: PersistedAppStateSnapshot | null,
-): TaskParams | null {
-  const params = persistedStateSnapshot?.params ?? data.params
-  if (!params || typeof params !== 'object' || Array.isArray(params)) {
-    return null
-  }
-
-  const record = params as Partial<TaskParams> & Record<string, unknown>
-  const outputCompression = record.output_compression
-  const frameCount = record.frame_count
-  const frameDurationMs = record.frame_duration_ms
-  const n = record.n
-
-  return {
-    size: typeof record.size === 'string'
-      ? resolveTaskParamSizeOrDefault(record.size)
-      : DEFAULT_PARAMS.size,
-    quality: isTaskQuality(record.quality) ? record.quality : DEFAULT_PARAMS.quality,
-    output_format: isTaskOutputFormat(record.output_format)
-      ? record.output_format
-      : DEFAULT_PARAMS.output_format,
-    output_compression:
-      typeof outputCompression === 'number' && Number.isFinite(outputCompression)
-        ? outputCompression
-        : null,
-    moderation: isTaskModeration(record.moderation) ? record.moderation : DEFAULT_PARAMS.moderation,
-    n: clampOutputImageCount(
-      typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : DEFAULT_PARAMS.n,
-    ),
-    background: isTaskBackground(record.background) ? record.background : DEFAULT_PARAMS.background,
-    input_fidelity: isTaskInputFidelity(record.input_fidelity) ? record.input_fidelity : null,
-    complexity: isTaskComplexity(record.complexity) ? record.complexity : DEFAULT_PARAMS.complexity,
-    frame_count:
-      typeof frameCount === 'number' && Number.isFinite(frameCount) ? Math.round(frameCount) : null,
-    frame_duration_ms:
-      typeof frameDurationMs === 'number' && Number.isFinite(frameDurationMs)
-        ? Math.round(frameDurationMs)
-        : null,
-  }
-}
-
-async function exportImageRecord(
-  image: StoredImage,
-  createdAt: number,
-  zipFiles: Record<string, Uint8Array | [Uint8Array, { mtime: Date }]>,
-): Promise<ExportImageFileEntry> {
-  if (image.kind === 'remote_url') {
-    return {
-      kind: 'remote_url',
-      url: image.remoteUrl,
-      createdAt,
-      source: image.source,
-      mimeType: image.mimeType ?? null,
-      width: image.width ?? null,
-      height: image.height ?? null,
-      byteSize: image.byteSize ?? null,
-      contentHash: image.contentHash ?? null,
-    }
-  }
-
-  if (image.kind === 'local_blob') {
-    const mimeType = (image.mimeType ?? image.blob.type) || 'image/png'
-    const path = createImageArchivePath(image.id, mimeType)
-    zipFiles[path] = [await blobToBytes(image.blob), { mtime: new Date(createdAt) }]
-
-    const thumbnailMimeType = image.thumbnailMimeType ?? image.thumbnailBlob?.type ?? null
-    const thumbnailPath = image.thumbnailBlob
-      ? createImageArchivePath(image.id, thumbnailMimeType, 'thumb')
-      : undefined
-    if (thumbnailPath && image.thumbnailBlob) {
-      zipFiles[thumbnailPath] = [await blobToBytes(image.thumbnailBlob), { mtime: new Date(createdAt) }]
-    }
-
-    return {
-      kind: 'local_blob',
-      path,
-      thumbnailPath,
-      createdAt,
-      source: image.source,
-      mimeType,
-      width: image.width ?? null,
-      height: image.height ?? null,
-      byteSize: image.byteSize ?? image.blob.size,
-      contentHash: image.contentHash ?? null,
-    }
-  }
-
-  const { mimeType, bytes } = dataUrlToBytes(image.dataUrl)
-  const path = createImageArchivePath(image.id, image.mimeType ?? mimeType)
-  zipFiles[path] = [bytes, { mtime: new Date(createdAt) }]
-
-  return {
-    kind: 'legacy_data_url',
-    path,
-    createdAt,
-    source: image.source,
-    mimeType: image.mimeType ?? mimeType,
-    width: image.width ?? null,
-    height: image.height ?? null,
-    byteSize: image.byteSize ?? bytes.byteLength,
-    contentHash: image.contentHash ?? null,
-  }
-}
-
-async function prepareImportedImage(
-  id: string,
-  info: ExportImageFileEntry,
-  unzipped: Record<string, Uint8Array>,
-): Promise<PreparedImportedImage> {
-  const normalizedUrl = normalizeOptionalString(info.url)
-  if (normalizedUrl) {
-    if (!isRemoteImageUrl(normalizedUrl)) {
-      throw new Error(`导入图片 ${id} 的 url 不是合法的 http(s) 地址`)
-    }
-
-    return {
-      id,
-      mode: 'remote_url',
-      remoteUrl: normalizedUrl,
-      info,
-    }
-  }
-
-  const normalizedPath = normalizeOptionalString(info.path)
-  if (!normalizedPath) {
-    throw new Error(`导入图片 ${id} 缺少 path/url，无法恢复`)
-  }
-
-  const originalBytes = unzipped[normalizedPath]
-  if (!originalBytes) {
-    throw new Error(`导入包缺少图片文件：${normalizedPath}`)
-  }
-
-  const originalMimeType = resolveMimeTypeFromPath(normalizedPath, normalizeOptionalString(info.mimeType) ?? undefined)
-  const originalBlob = new Blob([toOwnedArrayBuffer(originalBytes)], { type: originalMimeType })
-
-  const normalizedThumbnailPath = normalizeOptionalString(info.thumbnailPath)
-  let thumbnailBlob: Blob | null | undefined
-  if (normalizedThumbnailPath) {
-    const thumbnailBytes = unzipped[normalizedThumbnailPath]
-    if (!thumbnailBytes) {
-      throw new Error(`导入包缺少缩略图文件：${normalizedThumbnailPath}`)
-    }
-
-    thumbnailBlob = new Blob([toOwnedArrayBuffer(thumbnailBytes)], {
-      type: resolveMimeTypeFromPath(normalizedThumbnailPath),
-    })
-  }
-
-  return {
-    id,
-    mode: 'local_blob',
-    originalBlob,
-    thumbnailBlob,
-    info,
-  }
-}
-
-async function writeImportedImage(image: PreparedImportedImage): Promise<string> {
-  if (image.mode === 'remote_url') {
-    return storeImage(image.remoteUrl, {
-      id: image.id,
-      createdAt: normalizeOptionalFiniteNumber(image.info.createdAt) ?? undefined,
-      source: normalizeOptionalSource(image.info.source),
-      mimeType: normalizeOptionalString(image.info.mimeType),
-      byteSize: normalizeOptionalFiniteNumber(image.info.byteSize) ?? null,
-      width: normalizeOptionalFiniteNumber(image.info.width) ?? null,
-      height: normalizeOptionalFiniteNumber(image.info.height) ?? null,
-      contentHash: normalizeOptionalString(image.info.contentHash),
-    })
-  }
-
-  const thumbnailBlob = image.thumbnailBlob ?? null
-  const width = normalizeOptionalFiniteNumber(image.info.width) ?? null
-  const height = normalizeOptionalFiniteNumber(image.info.height) ?? null
-  const thumbnailWidth: number | null = null
-  const thumbnailHeight: number | null = null
-
-  return storeImage(image.originalBlob, {
-    id: image.id,
-    createdAt: normalizeOptionalFiniteNumber(image.info.createdAt) ?? undefined,
-    source: normalizeOptionalSource(image.info.source),
-    mimeType: (normalizeOptionalString(image.info.mimeType) ?? image.originalBlob.type) || null,
-    byteSize: normalizeOptionalFiniteNumber(image.info.byteSize) ?? image.originalBlob.size,
-    width,
-    height,
-    contentHash: normalizeOptionalString(image.info.contentHash),
-    thumbnailBlob,
-    thumbnailMimeType: thumbnailBlob?.type || null,
-    thumbnailWidth,
-    thumbnailHeight,
-  })
-}
-
 export async function exportData() {
+  const version = getDataVersion()
   try {
-    const tasks = await getAllTasks()
-    const images = await listImages()
-    const appStateSnapshot = buildPersistedAppStateSnapshot(useStore.getState())
+    await initStore()
+    const { tasks, images, appStateSnapshot } = await withDataMutation(async () => ({
+      tasks: await getAllTasks(),
+      images: await listImages(),
+      appStateSnapshot: buildPersistedAppStateSnapshot(useStore.getState()),
+    }), version)
     const exportedAt = Date.now()
     const imageCreatedAtFallback = new Map<string, number>()
 
@@ -440,8 +167,8 @@ export async function exportData() {
       { mtime: new Date(exportedAt) },
     ]
 
-    const zipped = zipSync(zipFiles, { level: 6 })
-    const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' })
+    const zipped = await zipArchive(zipFiles)
+    const blob = new Blob([toOwnedArrayBuffer(zipped)], { type: 'application/zip' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
@@ -457,153 +184,162 @@ export async function exportData() {
 }
 
 export async function importData(file: File) {
+  const version = getDataVersion()
+  let recordsCommitted = false
   try {
     const buffer = await file.arrayBuffer()
-    const unzipped = unzipSync(new Uint8Array(buffer))
+    const unzipped = await unzipArchive(new Uint8Array(buffer))
 
     const manifestBytes = unzipped['manifest.json']
     if (!manifestBytes) {
       throw new Error('ZIP 中缺少 manifest.json')
     }
 
-    const data: ExportData = JSON.parse(strFromU8(manifestBytes))
-    if (!Array.isArray(data.tasks) || !data.imageFiles || typeof data.imageFiles !== 'object') {
-      throw new Error('无效的数据格式')
-    }
-
-    const persistedStateSnapshot = readPersistedAppStateSnapshot(data.persistedState)
-    const currentState = useStore.getState()
-    const existingTasks = await getAllTasks()
-    const existingTaskIds = new Set(existingTasks.map((task) => task.id))
-    const existingImages = await listImages()
-    const existingImageIds = new Set(existingImages.map((image) => image.id))
-    const importedProviders = getImportedProvidersFromExport(data, persistedStateSnapshot)
-    const importedCategories = getImportedCategoriesFromExport(data, persistedStateSnapshot)
-    const importedPromptLibrary = getImportedPromptLibraryFromExport(data, persistedStateSnapshot)
-    const {
-      providers: mergedProviders,
-      providerIdMap,
-      addedProviderCount,
-      skippedProviderCount,
-    } = mergeImportedProviders(currentState.providers, importedProviders)
-    const { categories: mergedCategories, categoryIdMap, addedCategoryCount } = mergeImportedCategories(
-      currentState.categories,
-      importedCategories,
-    )
-    const { promptLibrary: mergedPromptLibrary, addedCount: addedPromptLibraryCount } =
-      mergePromptLibraryItems(currentState.promptLibrary, importedPromptLibrary)
-    const importedActiveProviderId = getImportedActiveProviderId(data, persistedStateSnapshot, providerIdMap)
-    const importedActiveCategoryFilter = getImportedActiveCategoryFilter(
-      data,
-      persistedStateSnapshot,
-      categoryIdMap,
-    )
-    const importedParams = getImportedParams(data, persistedStateSnapshot)
-    const importedGalleryDisplayMode = getImportedGalleryDisplayMode(persistedStateSnapshot)
-
-    const tasksToImport = data.tasks
-      .filter((task) => !existingTaskIds.has(task.id))
-      .map((task) =>
-        remapImportedTaskRelations(
-          task,
-          mergedProviders,
-          providerIdMap,
-          mergedCategories,
-          categoryIdMap,
-        ),
-      )
-    const skippedTaskCount = data.tasks.length - tasksToImport.length
-    const referencedImageIds = new Set<string>()
-
-    for (const task of tasksToImport) {
-      for (const id of getTaskReferencedImageIds(task)) {
-        referencedImageIds.add(id)
-      }
-    }
-
-    for (const referencedImageId of referencedImageIds) {
-      if (!(referencedImageId in data.imageFiles) && !existingImageIds.has(referencedImageId)) {
-        throw new Error(`导入包缺少被任务引用的图片条目：${referencedImageId}`)
-      }
-    }
-
-    const preparedImages: PreparedImportedImage[] = []
+    const data = parseExportManifest(JSON.parse(strFromU8(manifestBytes)))
+    const preparedRecords: StoredImage[] = []
     for (const [id, info] of Object.entries(data.imageFiles)) {
-      if (existingImageIds.has(id)) {
-        continue
+      preparedRecords.push(await prepareImportedImageRecord(id, info, unzipped))
+    }
+
+    await initStore()
+    await withDataMutation(async () => {
+      const persistedStateSnapshot = readPersistedAppStateSnapshot(data.persistedState)
+      const existingTasks = await getAllTasks()
+      const existingTaskIds = new Set(existingTasks.map((task) => task.id))
+      const existingImages = await listImages()
+      const existingImageIds = new Set(existingImages.map((image) => image.id))
+      const currentState = useStore.getState()
+      const importedProviders = getImportedProvidersFromExport(data, persistedStateSnapshot)
+      const importedCategories = getImportedCategoriesFromExport(data, persistedStateSnapshot)
+      const importedPromptLibrary = getImportedPromptLibraryFromExport(data, persistedStateSnapshot)
+      const {
+        providers: mergedProviders,
+        providerIdMap,
+        addedProviderCount,
+        skippedProviderCount,
+      } = mergeImportedProviders(currentState.providers, importedProviders)
+      const { categories: mergedCategories, categoryIdMap, addedCategoryCount } = mergeImportedCategories(
+        currentState.categories,
+        importedCategories,
+      )
+      const { promptLibrary: mergedPromptLibrary, addedCount: addedPromptLibraryCount } =
+        mergePromptLibraryItems(currentState.promptLibrary, importedPromptLibrary)
+      const importedActiveProviderId = getImportedActiveProviderId(data, persistedStateSnapshot, providerIdMap)
+      const importedActiveCategoryFilter = getImportedActiveCategoryFilter(
+        data,
+        persistedStateSnapshot,
+        categoryIdMap,
+      )
+      const rawParams = persistedStateSnapshot?.params ?? data.params
+      const importedParams = rawParams ? parseImportedParams(rawParams) : null
+      const importedGalleryDisplayMode = getImportedGalleryDisplayMode(persistedStateSnapshot)
+
+      const tasksToImport = data.tasks
+        .filter((task) => !existingTaskIds.has(task.id))
+        .map((task) =>
+          remapImportedTaskRelations(
+            task,
+            mergedProviders,
+            providerIdMap,
+            mergedCategories,
+            categoryIdMap,
+          ),
+        )
+      const skippedTaskCount = data.tasks.length - tasksToImport.length
+      const referencedImageIds = new Set<string>()
+
+      for (const task of tasksToImport) {
+        for (const id of getTaskReferencedImageIds(task)) {
+          referencedImageIds.add(id)
+        }
       }
 
-      preparedImages.push(await prepareImportedImage(id, info, unzipped))
-    }
-    const skippedImageCount = Object.keys(data.imageFiles).length - preparedImages.length
+      for (const referencedImageId of referencedImageIds) {
+        if (!(referencedImageId in data.imageFiles) && !existingImageIds.has(referencedImageId)) {
+          throw new Error(`导入包缺少被任务引用的图片条目：${referencedImageId}`)
+        }
+      }
 
-    for (const preparedImage of preparedImages) {
-      await writeImportedImage(preparedImage)
-    }
+      const preparedImages = preparedRecords.filter((image) => !existingImageIds.has(image.id))
+      const skippedImageCount = Object.keys(data.imageFiles).length - preparedImages.length
 
-    for (const task of tasksToImport) {
-      await putTask(task)
-    }
+      await assertImportedImageIdsCompatible(preparedRecords, existingImages)
+      assertDataVersion(version)
+      await commitImportedRecords(tasksToImport, preparedImages)
+      recordsCommitted = true
 
-    useStore
-      .getState()
-      .replaceProviderState(mergedProviders, importedActiveProviderId ?? currentState.activeProviderId)
-    useStore
-      .getState()
-      .replaceCategoryState(mergedCategories, importedActiveCategoryFilter ?? currentState.activeCategoryFilter)
-    useStore.getState().replacePromptLibrary(mergedPromptLibrary)
-    if (importedParams) {
-      useStore.getState().setParams(importedParams)
-    }
-    if (importedGalleryDisplayMode) {
-      useStore.getState().setGalleryDisplayMode(importedGalleryDisplayMode)
-    }
+      const liveState = useStore.getState()
+      const tasks = [...tasksToImport, ...liveState.tasks]
+      liveState.setTasks(tasks)
+      useStore
+        .getState()
+        .replaceProviderState(
+          mergeImportedItemsWithLiveState(currentState.providers, mergedProviders, liveState.providers),
+          importedActiveProviderId ?? liveState.activeProviderId,
+        )
+      useStore
+        .getState()
+        .replaceCategoryState(
+          mergeImportedItemsWithLiveState(currentState.categories, mergedCategories, liveState.categories),
+          importedActiveCategoryFilter ?? liveState.activeCategoryFilter,
+        )
+      useStore.getState().replacePromptLibrary(
+        mergeImportedItemsWithLiveState(currentState.promptLibrary, mergedPromptLibrary, liveState.promptLibrary),
+      )
+      if (importedParams) {
+        useStore.getState().setParams(importedParams)
+      }
+      if (importedGalleryDisplayMode) {
+        useStore.getState().setGalleryDisplayMode(importedGalleryDisplayMode)
+      }
 
-    const tasks = await getAllTasks()
-    useStore.getState().setTasks(tasks)
-    repairCategoryStateFromTasks(tasks)
+      repairCategoryStateFromTasks(tasks)
 
-    const summaryParts = [`已导入 ${tasksToImport.length} 条记录`]
-    if (data.version === 6) {
-      summaryParts.push('已兼容导入 v6 备份')
-    }
-    if (skippedTaskCount > 0) {
-      summaryParts.push(`跳过 ${skippedTaskCount} 条重复记录`)
-    }
-    if (preparedImages.length > 0) {
-      summaryParts.push(`导入 ${preparedImages.length} 张图片`)
-    }
-    if (skippedImageCount > 0) {
-      summaryParts.push(`跳过 ${skippedImageCount} 张重复图片`)
-    }
-    if (addedProviderCount > 0) {
-      summaryParts.push(`新增 ${addedProviderCount} 个供应商`)
-    }
-    if (skippedProviderCount > 0) {
-      summaryParts.push(`跳过 ${skippedProviderCount} 个重复供应商`)
-    }
-    if (addedCategoryCount > 0) {
-      summaryParts.push(`新增 ${addedCategoryCount} 个分类`)
-    }
-    if (addedPromptLibraryCount > 0) {
-      summaryParts.push(`新增 ${addedPromptLibraryCount} 条提示词`)
-    }
-    useStore.getState().showToast(summaryParts.join('，'), 'success')
+      const summaryParts = [`已导入 ${tasksToImport.length} 条记录`]
+      if (data.version === 6) {
+        summaryParts.push('已兼容导入 v6 备份')
+      }
+      if (skippedTaskCount > 0) {
+        summaryParts.push(`跳过 ${skippedTaskCount} 条重复记录`)
+      }
+      if (preparedImages.length > 0) {
+        summaryParts.push(`导入 ${preparedImages.length} 张图片`)
+      }
+      if (skippedImageCount > 0) {
+        summaryParts.push(`跳过 ${skippedImageCount} 张重复图片`)
+      }
+      if (addedProviderCount > 0) {
+        summaryParts.push(`新增 ${addedProviderCount} 个供应商`)
+      }
+      if (skippedProviderCount > 0) {
+        summaryParts.push(`跳过 ${skippedProviderCount} 个重复供应商`)
+      }
+      if (addedCategoryCount > 0) {
+        summaryParts.push(`新增 ${addedCategoryCount} 个分类`)
+      }
+      if (addedPromptLibraryCount > 0) {
+        summaryParts.push(`新增 ${addedPromptLibraryCount} 条提示词`)
+      }
+      useStore.getState().showToast(summaryParts.join('，'), 'success')
+    }, version)
   } catch (error) {
     useStore
       .getState()
-      .showToast(`导入失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+      .showToast(`${recordsCommitted ? '图片与任务已写入，但配置恢复未完成' : '导入失败'}：${error instanceof Error ? error.message : String(error)}`, 'error')
   }
 }
 
 export async function addImageFromFile(file: File): Promise<void> {
+  const version = getDataVersion()
   if (!file.type.startsWith('image/')) {
-    return
+    throw new Error('请选择图片文件')
   }
 
   const dataUrl = await fileToDataUrl(file)
-  const id = await storeImage(dataUrl, { stageOnly: true })
-  useStore.getState().addInputImage({ id, dataUrl })
+  await withDataMutation(async () => {
+    const id = await storeImage(dataUrl, { stageOnly: true })
+    useStore.getState().addInputImage({ id, dataUrl })
+  }, version)
 }
 
 export function normalizeImageUrl(url: string): string {
@@ -627,16 +363,20 @@ export function normalizeImageUrl(url: string): string {
 }
 
 export async function addImageFromUrl(url: string): Promise<void> {
+  const version = getDataVersion()
   const normalizedUrl = normalizeImageUrl(url)
-  const id = await storeImage(normalizedUrl, { stageOnly: true })
-  useStore.getState().addInputImage({ id, dataUrl: normalizedUrl })
+  await withDataMutation(async () => {
+    const id = await storeImage(normalizedUrl, { stageOnly: true })
+    useStore.getState().addInputImage({ id, dataUrl: normalizedUrl })
+  }, version)
 }
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result) : reject(new Error('图片文件读取结果无效'))
+    reader.onerror = () => reject(reader.error ?? new Error('图片文件读取失败'))
     reader.readAsDataURL(file)
   })
 }

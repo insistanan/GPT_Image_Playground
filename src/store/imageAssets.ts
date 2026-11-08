@@ -1,7 +1,9 @@
 import {
   clearImages,
   deleteImage,
+  getImageRecord,
   getAllImageRecords,
+  putImageRecord,
   hashDataUrl,
   storeImageBlob,
   storeLegacyDataUrl,
@@ -10,6 +12,7 @@ import {
 import { buildImageThumbnail } from '@/lib/imagePreview'
 import { isRemoteImageUrl } from '@/lib/imageUrl'
 import type { StoredImage, StoredImageSource } from '@/types'
+import { DataResetError, getDataVersion, withDataMutation } from './dataMutation'
 import {
   clearImageCaches,
   deleteCachedImage,
@@ -146,48 +149,46 @@ async function resolveImageAssetViewMetadata(
 async function backfillImageAssetThumbnail(
   imageId: string,
   blob: Blob,
-  options: SaveBlobImageAssetOptions,
+  contentHash: string | null | undefined,
+  version: number,
 ) {
   const generatedThumbnail = await buildThumbnailForBlob(blob)
   if (!generatedThumbnail) {
     return
   }
 
-  await storeImageBlob(blob, {
-    id: imageId,
-    source: options.source,
-    createdAt: options.createdAt,
-    contentHash: options.contentHash,
-    mimeType: options.mimeType,
-    byteSize: options.byteSize,
-    width: generatedThumbnail.width,
-    height: generatedThumbnail.height,
-    replaceExisting: true,
-    thumbnailBlob: generatedThumbnail.thumbnailBlob,
-    thumbnailMimeType: generatedThumbnail.thumbnailMimeType || generatedThumbnail.thumbnailBlob.type || null,
-    thumbnailWidth: generatedThumbnail.thumbnailWidth,
-    thumbnailHeight: generatedThumbnail.thumbnailHeight,
-  })
+  await withDataMutation(async () => {
+    const current = await getImageRecord(imageId)
+    if (!current || current.kind !== 'local_blob' || current.contentHash !== contentHash || current.thumbnailBlob) return
+    await putImageRecord({
+      ...current,
+      width: generatedThumbnail.width,
+      height: generatedThumbnail.height,
+      thumbnailBlob: generatedThumbnail.thumbnailBlob,
+      thumbnailMimeType: generatedThumbnail.thumbnailMimeType || generatedThumbnail.thumbnailBlob.type || null,
+      thumbnailWidth: generatedThumbnail.thumbnailWidth,
+      thumbnailHeight: generatedThumbnail.thumbnailHeight,
+    })
 
-  setCachedImage(imageId, blob, 'original')
-  setCachedImage(imageId, generatedThumbnail.thumbnailBlob, 'thumbnail')
-  setCachedImageMetadata(imageId, {
-    width: generatedThumbnail.width,
-    height: generatedThumbnail.height,
-  })
+    // 已展示的地址保持有效，后续缓存淘汰后再使用新缩略图。
+    if (!getCachedImage(imageId, 'thumbnail')) {
+      setCachedImage(imageId, generatedThumbnail.thumbnailBlob, 'thumbnail')
+    }
+    setCachedImageMetadata(imageId, {
+      width: generatedThumbnail.width,
+      height: generatedThumbnail.height,
+    })
+  }, version)
 }
 
 export async function saveImageAssetBlob(
   blob: Blob,
   options: SaveBlobImageAssetOptions = {},
 ): Promise<string> {
-  let width = options.width ?? null
-  let height = options.height ?? null
-  let thumbnailBlob = options.thumbnailBlob ?? null
-  let thumbnailMimeType = options.thumbnailMimeType ?? null
-  let thumbnailWidth = options.thumbnailWidth ?? null
-  let thumbnailHeight = options.thumbnailHeight ?? null
-  const shouldBackfillThumbnail = !thumbnailBlob
+  const version = getDataVersion()
+  const width = options.width ?? null
+  const height = options.height ?? null
+  const thumbnailBlob = options.thumbnailBlob ?? null
 
   const imageId = await storeImageBlob(blob, {
     id: options.id,
@@ -200,21 +201,31 @@ export async function saveImageAssetBlob(
     height,
     replaceExisting: options.replaceExisting,
     thumbnailBlob,
-    thumbnailMimeType: thumbnailMimeType || thumbnailBlob?.type || null,
-    thumbnailWidth,
-    thumbnailHeight,
+    thumbnailMimeType: options.thumbnailMimeType || thumbnailBlob?.type || null,
+    thumbnailWidth: options.thumbnailWidth ?? null,
+    thumbnailHeight: options.thumbnailHeight ?? null,
   })
 
-  setCachedImage(imageId, blob, 'original')
-  if (thumbnailBlob) {
-    setCachedImage(imageId, thumbnailBlob, 'thumbnail')
-  }
-  if (width && height) {
-    setCachedImageMetadata(imageId, { width, height })
-  }
-
-  if (shouldBackfillThumbnail) {
-    void backfillImageAssetThumbnail(imageId, blob, options)
+  // 去重可能命中已有记录，缓存必须与实际持久化的内容一致。
+  const record = await getImageRecord(imageId)
+  if (!record) throw new Error(`图片 ${imageId} 保存后未找到记录`)
+  if (record.kind === 'local_blob') {
+    if (options.replaceExisting || !getCachedImage(imageId, 'original')) {
+      setCachedImage(imageId, record.blob, 'original')
+    }
+    if (record.thumbnailBlob && (options.replaceExisting || !getCachedImage(imageId, 'thumbnail'))) {
+      setCachedImage(imageId, record.thumbnailBlob, 'thumbnail')
+    }
+    if (record.width && record.height) {
+      setCachedImageMetadata(imageId, { width: record.width, height: record.height })
+    }
+    if (!record.thumbnailBlob) {
+      void backfillImageAssetThumbnail(imageId, record.blob, record.contentHash, version).catch((error) => {
+        if (!(error instanceof DataResetError)) console.error(`图片 ${imageId} 缩略图保存失败`, error)
+      })
+    }
+  } else {
+    setCachedImage(imageId, record.kind === 'remote_url' ? record.remoteUrl : record.dataUrl, 'original')
   }
 
   return imageId
@@ -233,7 +244,7 @@ export async function saveImageAssetReference(
         id: options.id,
         source: options.source ?? 'upload',
       })
-  setCachedImage(imageId, referenceUrl, 'original')
+  if (!getCachedImage(imageId, 'original')) setCachedImage(imageId, referenceUrl, 'original')
   return imageId
 }
 
@@ -255,73 +266,12 @@ export async function stageImageAssetReference(referenceUrl: string): Promise<st
   return imageId
 }
 
-export function getCachedImageAssetUrl(
-  imageId: string,
-  variant: ImageAssetVariant = 'original',
-): string | undefined {
-  return getCachedImage(imageId, variant)
-}
-
-export async function ensureImageAssetUrl(
-  imageId: string,
-  variant: ImageAssetVariant = 'original',
-): Promise<string | undefined> {
-  return ensureImageCached(imageId, variant)
-}
-
-export async function ensureImageAssetDataUrl(imageId: string): Promise<string | undefined> {
-  return ensureImageDataUrl(imageId)
-}
-
-export function getCachedImageAssetMetadata(imageId: string): ImageAssetMetadata | undefined {
-  return getCachedImageMetadata(imageId)
-}
-
-export function getCachedImageAssetView(
-  imageId: string,
-  options: ImageAssetViewOptions = {},
-): ImageAssetView | null {
-  const variant = options.variant ?? 'original'
-  const url = getCachedImage(imageId, variant)
-  if (!url) {
-    return null
-  }
-
-  const metadata = options.includeMetadata || options.inferMetadataFromUrl
-    ? getCachedImageMetadata(imageId)
-      ?? inferredImageAssetMetadataCache.get(getInferredMetadataKey(imageId, variant))
-      ?? null
-    : null
-
-  return { url, metadata }
-}
-
-export async function ensureImageAssetView(
-  imageId: string,
-  options: ImageAssetViewOptions = {},
-): Promise<ImageAssetView | null> {
-  const variant = options.variant ?? 'original'
-  const url = getCachedImage(imageId, variant) ?? await ensureImageCached(imageId, variant)
-  if (!url) {
-    return null
-  }
-
-  const metadata = await resolveImageAssetViewMetadata(imageId, url, variant, options)
-  return { url, metadata }
-}
-
-export async function ensureImageAssetMetadata(
-  imageId: string,
-): Promise<ImageAssetMetadata | undefined> {
-  return ensureCachedImageMetadata(imageId)
-}
-
 export function evictImageAsset(imageId: string) {
   deleteCachedImage(imageId)
   clearInferredImageAssetMetadata(imageId)
 }
 
-function clearImageAssetCaches() {
+export function clearImageAssetCaches() {
   clearImageCaches()
   inferredImageAssetMetadataCache.clear()
 }
@@ -353,30 +303,15 @@ export interface ImageHandle {
   /** 同步可用的显示地址 */
   displayUrl: string | undefined
   /** 异步重新加载 */
-  reload(): Promise<ImageHandle>
+  reload(options?: Omit<ImageAssetViewOptions, 'variant'>): Promise<ImageHandle>
   /** 同步的元信息 */
   metadata: ImageAssetMetadata | null
-  /** 获取缩略图句柄 */
-  getThumbnail(): ImageHandle
   /** 获取原始数据地址 */
   getRawDataUrl(): Promise<string | undefined>
 }
 
-export interface StoreImageOptions {
-  id?: string
-  source?: StoredImageSource
-  createdAt?: number
-  contentHash?: string | null
-  mimeType?: string | null
-  byteSize?: number | null
-  width?: number | null
-  height?: number | null
-  replaceExisting?: boolean
+export interface StoreImageOptions extends SaveBlobImageAssetOptions {
   stageOnly?: boolean
-  thumbnailBlob?: Blob | null
-  thumbnailMimeType?: string | null
-  thumbnailWidth?: number | null
-  thumbnailHeight?: number | null
 }
 
 export async function storeImage(
@@ -404,17 +339,13 @@ function makeImageHandle(
 ): ImageHandle {
   return {
     displayUrl: existingUrl ?? getCachedImage(imageId, variant),
-    metadata: existingMetadata ?? getCachedImageMetadata(imageId) ?? null,
-    async reload(): Promise<ImageHandle> {
+    metadata: existingMetadata ?? getCachedImageMetadata(imageId)
+      ?? inferredImageAssetMetadataCache.get(getInferredMetadataKey(imageId, variant)) ?? null,
+    async reload(options = { includeMetadata: true, inferMetadataFromUrl: true }): Promise<ImageHandle> {
       const url = await ensureImageCached(imageId, variant)
       if (!url) return makeImageHandle(imageId, variant)
-      const metadata = await resolveImageAssetViewMetadata(imageId, url, variant, {
-        includeMetadata: true, inferMetadataFromUrl: true, variant,
-      })
+      const metadata = await resolveImageAssetViewMetadata(imageId, url, variant, options)
       return makeImageHandle(imageId, variant, url, metadata)
-    },
-    getThumbnail(): ImageHandle {
-      return makeImageHandle(imageId, "thumbnail")
     },
     async getRawDataUrl(): Promise<string | undefined> {
       return ensureImageDataUrl(imageId)

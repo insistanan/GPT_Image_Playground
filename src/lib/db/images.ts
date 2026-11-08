@@ -523,7 +523,7 @@ async function findImageRecordByContentHash(contentHash: string): Promise<Stored
   )
 }
 
-function normalizeStoredImageRecord(value: unknown, context: string): StoredImage {
+export function normalizeStoredImageRecord(value: unknown, context: string): StoredImage {
   if (!isRecord(value)) {
     throw new Error(`${context} 不是对象，无法识别图片记录`)
   }

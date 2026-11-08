@@ -1,10 +1,17 @@
 import type { AppView } from '@/types'
+import type { AppState, StoreSetter } from '../contracts'
 
-export function createViewerSlice(set: any) {
+type ViewerSlice = Pick<AppState,
+  | 'appView' | 'setAppView' | 'imageEditSession' | 'setImageEditSession' | 'detailTaskId' | 'setDetailTaskId'
+  | 'lightboxImageId' | 'lightboxImageList' | 'setLightboxImageId' | 'showSettings' | 'setShowSettings'
+  | 'showPromptLibrary' | 'setShowPromptLibrary' | 'shareToSquareTarget' | 'setShareToSquareTarget'
+>
+
+export function createViewerSlice(set: StoreSetter): ViewerSlice {
   return {
     appView: 'local' as AppView,
     setAppView(appView: AppView) {
-      set((state: any) => ({
+      set((state) => ({
         appView,
         selectedTaskIds: [],
         imageEditSession: null,
@@ -12,8 +19,8 @@ export function createViewerSlice(set: any) {
         shareToSquareTarget: appView === 'square' ? null : state.shareToSquareTarget,
       }))
     },
-    imageEditSession: null as any,
-    setImageEditSession(imageEditSession: any) { set({ imageEditSession }) },
+    imageEditSession: null,
+    setImageEditSession(imageEditSession) { set({ imageEditSession }) },
     detailTaskId: null as string | null,
     setDetailTaskId(detailTaskId: string | null) { set({ detailTaskId }) },
     lightboxImageId: null as string | null,
@@ -23,14 +30,14 @@ export function createViewerSlice(set: any) {
     },
     showSettings: false,
     setShowSettings(showSettings: boolean) {
-      set((state: any) => ({ showSettings, showPromptLibrary: showSettings ? false : state.showPromptLibrary }))
+      set((state) => ({ showSettings, showPromptLibrary: showSettings ? false : state.showPromptLibrary }))
     },
     showPromptLibrary: false,
     setShowPromptLibrary(showPromptLibrary: boolean) {
-      set((state: any) => ({ showPromptLibrary, showSettings: showPromptLibrary ? false : state.showSettings }))
+      set((state) => ({ showPromptLibrary, showSettings: showPromptLibrary ? false : state.showSettings }))
     },
-    shareToSquareTarget: null as any,
-    setShareToSquareTarget(shareToSquareTarget: any) {
+    shareToSquareTarget: null,
+    setShareToSquareTarget(shareToSquareTarget) {
       set({ shareToSquareTarget })
     },
   }

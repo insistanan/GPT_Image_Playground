@@ -23,7 +23,7 @@ async function loadTaskInputImages(
     const dataUrl = await getImageView(imageId).getRawDataUrl()
     throwIfAborted?.()
     if (!dataUrl) {
-      continue
+      throw new Error(`参考图缺失（${imageId}），请恢复图片或重新选择参考图后再提交`)
     }
 
     inputImages.push({

@@ -12,7 +12,9 @@ export default function App() {
   const appView = useStore((state) => state.appView)
 
   useEffect(() => {
-    initStore()
+    void initStore().catch((error) => {
+      useStore.getState().showToast(`本地数据加载失败：${error instanceof Error ? error.message : String(error)}`, 'error')
+    })
     const stopRecycleBinJanitor = startRecycleBinJanitor()
 
     return () => {
@@ -38,14 +40,6 @@ export default function App() {
           )}
         </div>
       </main>
-
-      {/* 右侧：预留面板/抽屉（暂时隐藏，因为设置已经改为抽屉） */}
-      {/* <aside className="w-0 md:w-16 lg:w-64 flex-shrink-0 border-l border-gray-200 bg-white dark:border-white/[0.08] dark:bg-gray-900 transition-all duration-300 hidden md:flex flex-col z-20">
-        <div className="p-4 text-center text-gray-400 text-sm mt-10">
-          <span className="hidden lg:inline">工具面板 (预留)</span>
-          <span className="lg:hidden">...</span>
-        </div>
-      </aside> */}
 
       <ImageEditModal />
       <DetailModal />
